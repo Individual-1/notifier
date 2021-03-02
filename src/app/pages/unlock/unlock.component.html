@@ -1,0 +1,18 @@
+<div class="container">
+    <mat-card class="col-8 mx-auto text-center">
+        <form [formGroup]="unlockForm" (submit)="submitPass()">
+            <mat-form-field appearance="outline">
+                <mat-label>Enter your passphrase</mat-label>
+                <input matInput formControlName="passphrase" placeholder="Passphrase">
+                <mat-hint>Enter your existing, or create a new passphrase if you haven't</mat-hint>
+                <mat-error *ngIf="unlockForm.get('passphrase')?.errors">
+                    Please enter a passphrase
+                </mat-error>
+            </mat-form-field>
+            <br />
+            <br />
+
+            <button [disabled]="!unlockForm.valid" mat-flat-button color="primary" type="submit">Submit</button>
+        </form>
+    </mat-card>
+</div>

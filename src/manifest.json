@@ -1,0 +1,25 @@
+{
+  "manifest_version": 2,
+  "name": "Reddit Notifier",
+  "version": "0.0.1",
+
+  "description": "Notify user on reddit activity",
+  "homepage_url": "https://github.com/Individual-1/reddit-notify-ext",
+
+  "permissions": [
+    "storage",
+    "identity",
+    "webRequest",
+    "https://*.reddit.com/*"
+  ],
+
+  "content_security_policy": "script-src 'self'; object-src 'self'",
+
+  "background": {
+    "page": "index.html?page=background",
+    "persistent": true
+  },
+  "browser_action": {
+    "default_popup": "index.html?page=home"
+  }
+}
