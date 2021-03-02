@@ -16,6 +16,8 @@ export class UnlockComponent implements OnInit {
     passphrase: [, { validators: [Validators.required], updateOn: "change" }],
   });
 
+  errorMsg: string = "";
+
   constructor(
     private router: Router,
     private formBuilder: FormBuilder,
@@ -29,15 +31,18 @@ export class UnlockComponent implements OnInit {
   ngOnInit(): void {
   }
 
-  submitPass() {
+  async submitPass() {
+    this.errorMsg = "";
     let pwControl: AbstractControl | null = this.unlockForm.get('passphrase');
     if (pwControl !== null) {
       let enc: TextEncoder = new TextEncoder();
       let pw: Uint8Array = enc.encode(pwControl.value);
-      this.c.unlockKey(pw).then(
-        r => { console.log('c' + r); if (r) this.redirectHome(); },
-        e => { console.log('d'); }
-      ); 
+      try {
+      let success: boolean = await this.c.unlockKey(pw);
+        if (success) this.redirectHome();
+      } catch (e) {
+        this.errorMsg = e.name + ": " + e.message;
+      }
     }
   }
 
