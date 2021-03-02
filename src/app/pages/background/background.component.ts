@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { CryptoService } from '@core/crypto/crypto.service';
 
 
 
@@ -9,7 +10,7 @@ import { Component, OnInit } from '@angular/core';
 })
 export class BackgroundComponent implements OnInit {
 
-  constructor() { }
+  constructor(private c: CryptoService) { }
 
   ngOnInit(): void {
   }

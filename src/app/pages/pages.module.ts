@@ -9,11 +9,12 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatCardModule } from '@angular/material/card';
+import { UsersComponent } from './users/users.component';
 
 
 
 @NgModule({
-  declarations: [SettingsComponent, UnlockComponent, OauthComponent, HomeComponent, BackgroundComponent],
+  declarations: [SettingsComponent, UnlockComponent, OauthComponent, HomeComponent, BackgroundComponent, UsersComponent],
   imports: [
     CommonModule,
     FormsModule,

@@ -27,6 +27,7 @@
     "@angular/router": "~11.2.3",
     "@aws-sdk/util-base64-browser": "^3.6.1",
     "@types/crypto-js": "^4.0.1",
+    "dexie": "^3.0.3",
     "rxjs": "~6.6.0",
     "scrypt-js": "^3.0.1",
     "secure-random": "^1.1.2",

@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 
 import { StorageService } from '@core/storage/storage.service'
-import { ScryptParams as sp } from "@models";
+import { ScryptParams as sp, StorageKeys as sk, ConfigArray, ConfigString, KeyCache } from "@models";
 
 import { aead, aeadSubtle } from "tink-crypto";
 import { syncScrypt } from "scrypt-js";
@@ -10,60 +10,56 @@ import { syncScrypt } from "scrypt-js";
   providedIn: 'root'
 })
 export class CryptoService {
-
   private aeadKey: aead.Aead | null = null;
-  private initialized: boolean = false;
+  private encoder: TextEncoder = new TextEncoder();
+  private decoder: TextDecoder = new TextDecoder();
 
-  constructor(private s: StorageService) { }
+  constructor(private s: StorageService) {}
 
-  public async isInitialized(): Promise<boolean> {
-    if (this.initialized) {
+  public decodeArray(v: Uint8Array): string {
+    return this.decoder.decode(v);
+  }
+
+  public encodeString(v: string): Uint8Array {
+    return this.encoder.encode(v);
+  }
+
+  public async isUnlocked(): Promise<boolean> {
+    if (this.aeadKey !== null) {
       return true;
     }
 
-    let saltCrypt: Uint8Array | null;
-    try {
-      saltCrypt = await this.s.getSaltCrypt();
-    } catch (e) {
-      throw e;
-    }
+    let cachedKey: KeyCache | undefined;
+    cachedKey = await this.s.getKey();
 
-    if (saltCrypt !== null) {
-      this.initialized = true;
+    if (cachedKey !== undefined) {
+      this.aeadKey = await this.createAEAD(cachedKey.key);
       return true;
     }
 
     return false;
   }
 
-  public isUnlocked(): boolean {
-    return this.aeadKey !== null;
-  }
-
   public async unlockKey(pw: Uint8Array): Promise<boolean> {
-    let aKey: aead.Aead;
-    let valid: boolean;
 
-    if (this.isUnlocked()) {
+    if (await this.isUnlocked()) {
       return true;
     }
 
-    try {
-      aKey = await this.deriveKey(pw);
-      valid = await this.testKey(aKey);
-    } catch (e) {
-      throw e;
-    }
+    let rKey: Uint8Array = await this.deriveRawKey(pw);
+    let aKey: aead.Aead = await this.createAEAD(rKey);
+    let valid: boolean = await this.testKey(aKey);
 
     if (valid) {
       this.aeadKey = aKey;
+      this.s.putKey(rKey);
     }
 
     return valid;
   }
 
   public async encrypt(data: Uint8Array): Promise<Uint8Array | null> {
-    if (this.aeadKey) {
+    if (this.aeadKey !== null) {
       return this.aeadKey.encrypt(data);
     } else {
       return null;
@@ -71,7 +67,7 @@ export class CryptoService {
   }
 
   public async decrypt(data: Uint8Array): Promise<Uint8Array | null> {
-    if (this.aeadKey) {
+    if (this.aeadKey !== null) {
       return this.aeadKey.decrypt(data);
     } else {
       return null;
@@ -79,77 +75,67 @@ export class CryptoService {
   }
 
   // TODO: generate random salt 
-  private generateSalt(): Uint8Array {
+  public generateRandomArray(len: number): Uint8Array {
     return Uint8Array.from([0x41]);
   }
 
   private async retrieveSalt(): Promise<Uint8Array> {
-    let salt: Uint8Array | null;
+    let saltEntry: ConfigArray | undefined;
+    let salt: Uint8Array;
 
-    try {
-      salt = await this.s.getSalt();
-    } catch (e) {
-      throw e;
-    }
+    saltEntry = await this.s.getConfigArray(sk.salt);
 
-    if (salt === null) {
-      salt = this.generateSalt();
-      try {
-        await this.s.clearEncrypted();
-        await this.s.setSalt(salt);
-      } catch (e) {
-        throw e;
-      }
+    if (saltEntry === undefined) {
+      salt = this.generateRandomArray(32);
+      let newEntry: ConfigArray = {
+        key: sk.salt,
+        isEnc: false,
+        value: salt,
+      };
+
+      await this.s.deleteEncryptedConfig();
+      await this.s.putConfig(newEntry);
+    } else {
+      salt = saltEntry.value;
     }
 
     return salt;
   }
 
-  private async deriveKey(pw: Uint8Array): Promise<aead.Aead> {
-    let salt: Uint8Array;
+  private async deriveRawKey(pw: Uint8Array): Promise<Uint8Array> {
+    let salt: Uint8Array = await this.retrieveSalt();
+    return syncScrypt(pw, salt, sp.scryptN, sp.scryptR, sp.scryptP, 32)
+  }
 
-    try {
-      salt = await this.retrieveSalt();
-    } catch (e) {
-      throw e;
-    }
 
-    let rawKey: Uint8Array = syncScrypt(pw, salt, sp.scryptN, sp.scryptR, sp.scryptP, 32)
-
-    return aeadSubtle.aesGcmFromRawKey(rawKey);
+  private async createAEAD(key: Uint8Array): Promise<aead.Aead> {
+    return aeadSubtle.aesGcmFromRawKey(key);
   }
 
   private async testKey(key: aead.Aead): Promise<boolean> {
-    let salt: Uint8Array | null;
-    let saltCrypt: Uint8Array | null;
+    let saltEntry: ConfigArray | undefined;
+    let saltCryptEntry: ConfigArray | undefined;
 
-    try {
-      salt = await this.s.getSalt();
-      saltCrypt = await this.s.getSaltCrypt();
-    } catch (e) {
-      throw e;
-    }
+    saltEntry = await this.s.getConfigArray(sk.salt);
+    saltCryptEntry = await this.s.getConfigArray(sk.saltCrypt);
 
-    if (saltCrypt == null && salt !== null) {
+    if (saltCryptEntry === undefined && saltEntry !== undefined) {
       // Check if first run with salt, salt will be set but not crypt
-      try {
-        saltCrypt = await key.encrypt(salt);
-      } catch (e) {
-        throw e;
+      let saltCrypt: Uint8Array = await key.encrypt(saltEntry.value);
+      let newEntry: ConfigArray = {
+        key: sk.saltCrypt,
+        isEnc: true,
+        value: saltCrypt
       }
 
-      this.s.setSaltCrypt(saltCrypt);
+      this.s.putConfig(newEntry);
       return true;
-    } else if (saltCrypt !== null && salt !== null) {
+    } else if (saltCryptEntry !== undefined && saltEntry !== undefined) {
       // Not first run, both salt and crypt are set, check if they match
       let saltDecrypt: Uint8Array;
-      try {
-        saltDecrypt = await key.decrypt(saltCrypt);
-      } catch (e) {
-        throw e;
-      }
+      saltDecrypt = await key.decrypt(saltCryptEntry.value);
 
-      return this.compareArray(salt, saltDecrypt);
+      return this.compareArray(saltEntry.value, saltDecrypt);
     }
 
     return false;

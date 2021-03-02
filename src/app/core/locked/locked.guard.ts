@@ -10,10 +10,11 @@ export class LockedGuard implements CanActivate {
 
   constructor(private router: Router, private c: CryptoService) {}
 
-  canActivate(
+  async canActivate(
     route: ActivatedRouteSnapshot,
-    state: RouterStateSnapshot): Observable<boolean | UrlTree> | Promise<boolean | UrlTree> | boolean | UrlTree {
-    if (!this.c.isUnlocked()) {
+    state: RouterStateSnapshot): Promise<boolean | UrlTree> {
+    let unlocked: boolean = await this.c.isUnlocked();
+    if (!unlocked) {
       return this.router.parseUrl('/unlock');
     } else {
       return true;
