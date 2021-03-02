@@ -16,7 +16,8 @@ export class UnlockComponent implements OnInit {
     passphrase: [, { validators: [Validators.required], updateOn: "change" }],
   });
 
-  errorMsg: string = "";
+  private defaultMsg: string = "Enter your existing, or create a new passphrase if you haven't";
+  hintMsg: string = this.defaultMsg;
 
   constructor(
     private router: Router,
@@ -32,7 +33,7 @@ export class UnlockComponent implements OnInit {
   }
 
   async submitPass() {
-    this.errorMsg = "";
+    this.hintMsg = this.defaultMsg;
     let pwControl: AbstractControl | null = this.unlockForm.get('passphrase');
     if (pwControl !== null) {
       let enc: TextEncoder = new TextEncoder();
@@ -41,7 +42,7 @@ export class UnlockComponent implements OnInit {
       let success: boolean = await this.c.unlockKey(pw);
         if (success) this.redirectHome();
       } catch (e) {
-        this.errorMsg = e.name + ": " + e.message;
+        this.hintMsg = e.name + ": " + e.message;
       }
     }
   }
