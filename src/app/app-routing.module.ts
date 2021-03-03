@@ -34,6 +34,11 @@ const routes: Routes = [
     component: UnlockComponent,
   },
   {
+    path: 'authorize',
+    component: OauthComponent,
+    canActivate: [LockedGuard]
+  },
+  {
     path: '**',
     component: HomeComponent,
     canActivate: [PageRouterGuard, LockedGuard]

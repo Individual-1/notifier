@@ -4,8 +4,6 @@ import { Router } from '@angular/router';
 
 import { CryptoService } from '@core/crypto/crypto.service';
 
-import { browser } from "webextension-polyfill-ts";
-
 @Component({
   selector: 'app-unlock',
   templateUrl: './unlock.component.html',
@@ -16,7 +14,7 @@ export class UnlockComponent implements OnInit {
     passphrase: [, { validators: [Validators.required], updateOn: "change" }],
   });
 
-  private defaultMsg: string = "Enter your existing, or create a new passphrase if you haven't";
+  private defaultMsg: string = "Enter your existing passphrase, or choose a new passphrase if you haven't";
   hintMsg: string = this.defaultMsg;
 
   constructor(

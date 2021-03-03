@@ -1,1 +1,12 @@
-<p>oauth works!</p>
+<div class="container">
+    <mat-card class="col-8 mx-auto text-center">
+        <form [formGroup]="authForm" (submit)="startAuth()">
+            <mat-form-field appearance="outline">
+                <mat-label>Authorize access to your Reddit account</mat-label>
+            </mat-form-field>
+            <br />
+            <br />
+            <button mat-flat-button color="primary" type="submit">Authorize</button>
+        </form>
+    </mat-card>
+</div>

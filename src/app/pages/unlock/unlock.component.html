@@ -1,15 +1,11 @@
 <div class="container">
-    <mat-card class="col-8 mx-auto text-center">
         <form [formGroup]="unlockForm" (submit)="submitPass()">
-            <mat-form-field appearance="outline">
-                <mat-label>Enter your passphrase</mat-label>
-                <input matInput formControlName="passphrase" placeholder="Passphrase">
-                <mat-hint> {{hintMsg}} </mat-hint>
-            </mat-form-field>
+                <label for="passphrase">Enter your passphrase</label>
+                <input id="passphrase" type="text" formControlName="passphrase">
+                <h4> {{hintMsg}} </h4>
             <br />
             <br />
 
-            <button [disabled]="!unlockForm.valid" mat-flat-button color="primary" type="submit">Submit</button>
+            <button [disabled]="!unlockForm.valid" color="primary" type="submit">Submit</button>
         </form>
-    </mat-card>
 </div>

@@ -46,17 +46,15 @@ export class StorageService {
     return this.db[dp.configTable].get(key);
   }
 
-  public getAllConfig(): Promise<Array<ConfigArray | ConfigString | undefined>> {
+  public getConfigBulkString(keys: Array<string>): Promise<Array<ConfigString | undefined>> {
     return this.db[dp.configTable].bulkGet(
-      [
-        sk.salt,
-        sk.saltCrypt,
-        sk.oauthClientId,
-        sk.oauthClientSecret,
-        sk.authorizeURL,
-        sk.accessToken,
-        sk.refreshToken,
-      ]
+      keys
+    );
+  }
+
+  public getConfigBulkArray(keys: Array<string>): Promise<Array<ConfigArray | undefined>> {
+    return this.db[dp.configTable].bulkGet(
+      keys
     );
   }
 

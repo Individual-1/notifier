@@ -1,1 +1,6 @@
-<p>settings works!</p>
+<table>
+    <tr *ngFor="let element of elements" (click)="onUpdate(element)">
+        <td>{{ element.key }}</td>
+        <td>{{ element.value }}</td>
+    </tr>
+</table>

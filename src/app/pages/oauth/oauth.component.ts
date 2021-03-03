@@ -1,4 +1,7 @@
 import { Component, OnInit } from '@angular/core';
+import { FormBuilder, FormGroup } from '@angular/forms';
+import { Router } from '@angular/router';
+import { TokenService } from '@core/token/token.service';
 
 @Component({
   selector: 'app-oauth',
@@ -6,10 +9,19 @@ import { Component, OnInit } from '@angular/core';
   styleUrls: ['./oauth.component.scss']
 })
 export class OauthComponent implements OnInit {
-
-  constructor() { }
+  authForm: FormGroup = this.formBuilder.group({
+  });
+  constructor(
+    private router: Router,
+    private formBuilder: FormBuilder,
+    private t: TokenService
+  ) { }
 
   ngOnInit(): void {
+  }
+
+  startAuth() {
+    this.t.doAuthorize();
   }
 
 }

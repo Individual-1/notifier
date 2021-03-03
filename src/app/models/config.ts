@@ -89,6 +89,13 @@ export class StorageKeys {
     static authorizeURL: string = "authorizeURL";
     static accessToken: string = "accessToken";
     static refreshToken: string = "refreshToken";
+    static plaintextSettings: Array<string> = [
+        StorageKeys.oauthClientId,
+        StorageKeys.authorizeURL,
+    ];
+    static encryptedSettings: Array<string> = [
+        StorageKeys.oauthClientSecret,
+    ];
 }
 
 /*
