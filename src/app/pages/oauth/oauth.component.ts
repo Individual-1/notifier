@@ -2,6 +2,9 @@ import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { Router } from '@angular/router';
 import { TokenService } from '@core/token/token.service';
+import { browser } from 'webextension-polyfill-ts';
+
+import { BackgroundAction, BackgroundMessage } from '@models';
 
 @Component({
   selector: 'app-oauth',
@@ -21,7 +24,12 @@ export class OauthComponent implements OnInit {
   }
 
   startAuth() {
-    this.t.doAuthorize();
+    let msg: BackgroundMessage = { action: BackgroundAction.startOAuthAuthorization } as BackgroundMessage;
+    browser.runtime.sendMessage(msg)
+  }
+
+  getRedirectURL(): string {
+    return this.t.getRedirectURL();
   }
 
 }

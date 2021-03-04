@@ -1,6 +1,26 @@
-<table>
-    <tr *ngFor="let element of elements" (click)="onUpdate(element)">
-        <td>{{ element.key }}</td>
-        <td>{{ element.value }}</td>
-    </tr>
-</table>
+<div [formGroup]="settingsForm">
+    <table>
+        <tr>
+            <td>Setting</td>
+            <td>Description</td>
+            <td>Value</td>
+        </tr>
+        <tr *ngFor="let element of elements | keyvalue">
+            <td>{{ element.key }}</td>
+            <td>{{ element.value.description }}</td>
+            <td>
+                <input *ngIf="element.value.enabled" formControlName="{{ element.key }}" placeholder="{{ element.value.value }}">
+                <p *ngIf="!element.value.enabled">{{ element.value.value }}</p>
+            </td>
+            <td>
+                <button *ngIf="element.value.enabled" (click)="element.value.enabled = false"
+                    ng-click="cancel()">Cancel</button>
+                <button *ngIf="element.value.enabled" (click)="updateSetting(element.key, element.value)" type="submit">Save</button>
+                <a *ngIf="!element.value.enabled" (click)="enableEdit(element.key, element.value)">
+                    <i class="material-icons" uib-tooltip="Edit" tooltip-trigger="mouseenter"
+                        tooltip-append-to-body="true" tooltip-placement="left">create</i>
+                </a>
+            </td>
+        </tr>
+    </table>
+</div>

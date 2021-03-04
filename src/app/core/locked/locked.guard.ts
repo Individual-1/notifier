@@ -1,7 +1,6 @@
 import { Injectable } from '@angular/core';
 import { CanActivate, ActivatedRouteSnapshot, Router, RouterStateSnapshot, UrlTree } from '@angular/router';
 import { CryptoService } from '@core/crypto/crypto.service';
-import { Observable } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'

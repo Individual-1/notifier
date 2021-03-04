@@ -1,11 +1,26 @@
 <div class="container">
-        <form [formGroup]="unlockForm" (submit)="submitPass()">
-                <label for="passphrase">Enter your passphrase</label>
-                <input id="passphrase" type="text" formControlName="passphrase">
-                <h4> {{hintMsg}} </h4>
-            <br />
-            <br />
+    <form [formGroup]="unlockForm" (submit)="submitPass()">
+        <label for="passphrase">Enter your passphrase</label>
+        <br>
+        <input id="passphrase" type="text" formControlName="passphrase">
+        <br>
+        <br>
 
-            <button [disabled]="!unlockForm.valid" color="primary" type="submit">Submit</button>
-        </form>
+        <button [disabled]="!unlockForm.valid" color="primary" type="submit">Submit</button>
+    </form>
+    <br>
+    <div class="tabs">
+        <div class="tab">
+            <input class="hidden" type="checkbox" id="checkhelp">
+            <label class="tab-label" for="checkhelp">What is this?</label>
+            <div class="tab-content">
+                Your passphrase is used to derive an AES-GCM key which we use to encrypt sensitive data before storage. 
+                <br><br>
+                If you haven't created a key, then choose (and remember) any passphrase and that will be used.
+                <br><br>
+                Please do not re-use credentials used elsewhere, as we are limited in our capacity to cache secrets securely due to WebExtension restrictions.
+            </div>
+        </div>
+        <p></p>
+    </div>
 </div>

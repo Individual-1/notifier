@@ -1,5 +1,6 @@
 import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
+import { RouterModule } from '@angular/router';
 
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations'
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
@@ -28,6 +29,7 @@ import { TokenService } from '@core/token/token.service';
     PagesModule,
     BrowserAnimationsModule,
     HttpClientModule,
+    RouterModule,
   ],
   providers: [CryptoService, StorageService, UserService, TokenService],
   bootstrap: [AppComponent]

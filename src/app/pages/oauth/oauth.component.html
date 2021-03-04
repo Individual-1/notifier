@@ -1,12 +1,13 @@
 <div class="container">
-    <mat-card class="col-8 mx-auto text-center">
         <form [formGroup]="authForm" (submit)="startAuth()">
-            <mat-form-field appearance="outline">
-                <mat-label>Authorize access to your Reddit account</mat-label>
-            </mat-form-field>
+            <label>Authorize access to your Reddit account</label>
             <br />
-            <br />
-            <button mat-flat-button color="primary" type="submit">Authorize</button>
+            <button type="submit">Authorize</button>
         </form>
-    </mat-card>
+        <div>
+        <p>Haven't configured Reddit OAuth?<br>
+        1. Go to <a href="https://old.reddit.com/prefs/apps/">Reddit</a> and configure a new application with redirect url: {{ getRedirectURL() }} <br>
+        2. Go to <a routerLink="/settings" routerLinkActive="active">settings</a> and configure your OAuth client id, secret, and authorization URL
+        </p>
+        </div>
 </div>

@@ -1,5 +1,6 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
 import { SettingsComponent } from './settings/settings.component';
 import { UnlockComponent } from './unlock/unlock.component';
 import { OauthComponent } from './oauth/oauth.component';
@@ -16,6 +17,7 @@ import { UsersComponent } from './users/users.component';
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
+    RouterModule,
   ]
 })
 export class PagesModule { }

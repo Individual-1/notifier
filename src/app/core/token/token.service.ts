@@ -13,8 +13,6 @@ import { Observable } from 'rxjs';
   providedIn: 'root'
 })
 export class TokenService {
-  private redirectURL: string = browser.identity.getRedirectURL();
-
   constructor(private s: StorageService, private c: CryptoService, private http: HttpClient) { }
 
   private genBasicAuth(user: string, pass: string): string {
@@ -28,12 +26,30 @@ export class TokenService {
 
   public async doAuthorize() {
     let clientIdEntry: ConfigString | undefined;
-    let clientSecretEntry: ConfigArray | undefined;
 
     clientIdEntry = await this.s.getConfigString(sk.oauthClientId);
+
+    if (clientIdEntry === undefined) {
+      // TODO: error out because of unset parameters
+      return;
+    }
+
+    let state: string = toBase64(this.c.generateRandomArray(32));
+
+    let returnURL: string = "";
+    try {
+      returnURL = await this.authorize(clientIdEntry.value, state);
+    } catch (err) {
+      console.log(err.message);
+      return;
+    }
+
+    let parsedURL: URL = new URL(returnURL);
+    let clientSecretEntry: ConfigArray | undefined;
+
     clientSecretEntry = await this.s.getConfigArray(sk.oauthClientSecret);
 
-    if (clientIdEntry === undefined || clientSecretEntry === undefined) {
+    if (clientSecretEntry === undefined) {
       // TODO: error out because of unset parameters
       return;
     }
@@ -45,10 +61,6 @@ export class TokenService {
     }
 
     let clientSecret: string = this.c.decodeArray(clientSecretArray);
-    let state: string = toBase64(this.c.generateRandomArray(32));
-
-    let returnURL: string = await this.authorize(clientIdEntry.value, state);
-    let parsedURL: URL = new URL(returnURL);
 
     if (parsedURL.searchParams.has("error")) {
       // TODO handle the error
@@ -56,10 +68,11 @@ export class TokenService {
     }
 
     let retState: string | null = parsedURL.searchParams.get("state");
-    if (retState === null || state != retState) {
+    if (retState === null || state !== retState) {
       // TODO handle error
       return;
     }
+
 
     let code: string | null = parsedURL.searchParams.get("code");
     if (code === null) {
@@ -115,9 +128,9 @@ export class TokenService {
     oauthURL.searchParams.set("client_id", clientId);
     oauthURL.searchParams.set("response_type", op.responseType);
     oauthURL.searchParams.set("state", state);
-    oauthURL.searchParams.set("redirect_uri", encodeURIComponent(this.redirectURL));
+    oauthURL.searchParams.set("redirect_uri", this.getRedirectURL());
     oauthURL.searchParams.set("duration", op.duration);
-    oauthURL.searchParams.set("scope", encodeURIComponent(op.scopes.join(' ')));
+    oauthURL.searchParams.set("scope", op.scopes.join(' '));
 
     return browser.identity.launchWebAuthFlow({
       interactive: true,
@@ -129,11 +142,11 @@ export class TokenService {
     const payload: HttpParams = new HttpParams()
       .set('grant_type', 'authorization_code')
       .set('code', code)
-      .set('redirect_uri', this.redirectURL);
+      .set('redirect_uri', this.getRedirectURL());
 
     const httpOptions = {
       headers: new HttpHeaders({
-        Authorization: authHeader
+        'Authorization': 'Basic ' + authHeader
       })
     };
 
@@ -147,7 +160,7 @@ export class TokenService {
 
     const httpOptions = {
       headers: new HttpHeaders({
-        Authorization: authHeader
+        'Authorization': 'Basic ' + authHeader
       })
     };
 

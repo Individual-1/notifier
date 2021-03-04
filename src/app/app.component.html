@@ -1,5 +1,13 @@
 <div class="app-wrapper">
   <main class="app-content">
-      <router-outlet></router-outlet>
+    <nav>
+      <ul>
+        <li><a routerLink="/settings" routerLinkActive="active">settings</a></li>
+        <li><a routerLink="/authorize" routerLinkActive="active">authorize</a></li>
+        <li><a routerLink="/unlock" routerLinkActive="active">unlock</a></li>
+      </ul>
+    </nav>
+    <router-outlet></router-outlet>
+    <router-outlet></router-outlet>
   </main>
 </div>

@@ -21,9 +21,9 @@ export class ScryptParams {
 */
 
 export class OAuthParams {
-    static authURL: string = "https://www.reddit.com/api/v1/authorize.compact";
+    static authURL: string = "https://www.reddit.com/api/v1/authorize";
     static tokenURL: string = "https://www.reddit.com/api/v1/access_token";
-    static scopes: Array<string> = [""];
+    static scopes: Array<string> = ["identity", "history"];
     static responseType: string = "code";
     static duration: string = "permanent";
 }
@@ -68,10 +68,6 @@ export interface OAuthRefreshRequest {
     Decription: Oauth client secret for Reddit app, writeonly in options
     [oauthClientSecret]: Uint8Array (base64 encoded)
 
-    authorizeURL - unencrypted
-    Description: Authorization URL to redirect user to 
-    [authorizeURL]: string
-
     accessToken - encrypted
     Description: Reddit access token, not exposed in options
     [accessToken]: Uint8Array (base64 encoded)
@@ -86,16 +82,22 @@ export class StorageKeys {
     static saltCrypt: string = "saltCrypt";
     static oauthClientId: string = "oauthClientId";
     static oauthClientSecret: string = "oauthClientSecret";
-    static authorizeURL: string = "authorizeURL";
     static accessToken: string = "accessToken";
     static refreshToken: string = "refreshToken";
     static plaintextSettings: Array<string> = [
         StorageKeys.oauthClientId,
-        StorageKeys.authorizeURL,
     ];
     static encryptedSettings: Array<string> = [
         StorageKeys.oauthClientSecret,
     ];
+    static descriptions = {
+        [StorageKeys.salt]: "Salt value used in key generation",
+        [StorageKeys.saltCrypt]: "Encrypted salt used to test decryption",
+        [StorageKeys.oauthClientId]: "Reddit OAuth client ID",
+        [StorageKeys.oauthClientSecret]: "Reddit OAuth client secret",
+        [StorageKeys.accessToken]: "Reddit access token",
+        [StorageKeys.refreshToken]: "Reddit refresh token",
+    }
 }
 
 /*
@@ -157,4 +159,18 @@ export interface User {
 export interface KeyCache {
     id: number,
     key: Uint8Array,
+}
+
+/*
+    Actions we want our background script to take
+*/
+export enum BackgroundAction {
+    startOAuthAuthorization = 1,
+    storeEncKey = 2,
+    getEncKey = 3,
+}
+
+export interface BackgroundMessage {
+    action: BackgroundAction,
+    data?: Object,
 }
