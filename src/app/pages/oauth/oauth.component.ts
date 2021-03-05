@@ -24,7 +24,7 @@ export class OauthComponent implements OnInit {
   }
 
   startAuth() {
-    let msg: BackgroundMessage = { action: BackgroundAction.startOAuthAuthorization, data: null } as BackgroundMessage;
+    let msg: BackgroundMessage = { type: BackgroundAction.startOAuthAuthorization, data: null } as BackgroundMessage;
     browser.runtime.sendMessage(msg)
   }
 

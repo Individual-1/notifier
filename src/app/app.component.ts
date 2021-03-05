@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ChangeDetectorRef, Component } from '@angular/core';
 
 @Component({
   selector: 'app-root',
@@ -7,4 +7,10 @@ import { Component } from '@angular/core';
 })
 export class AppComponent {
   title = 'reddit-notify-ext';
+
+  constructor(private ref: ChangeDetectorRef) { }
+
+  onRouteActivated() {
+    this.ref.detectChanges();
+  }
 }

@@ -6,7 +6,6 @@ import { ScryptParams as sp, StorageKeys as sk, ConfigArray, ConfigString, KeyCa
 import { browser } from 'webextension-polyfill-ts';
 import { aead, aeadSubtle } from "tink-crypto";
 import { syncScrypt } from "scrypt-js";
-import { Console } from 'console';
 
 @Injectable({
   providedIn: 'root'
@@ -52,19 +51,24 @@ export class CryptoService {
   }
 
   public async encrypt(data: Uint8Array): Promise<Uint8Array | null> {
-    if (this.aeadKey !== null) {
+    if (this.aeadKey !== null && this.aeadKey !== undefined) {
       return this.aeadKey.encrypt(data);
     } else {
+      if (await this.loadAead()) {
+        return this.aeadKey!.encrypt(data);
+      }
       return null;
     }
   }
 
   public async decrypt(data: Uint8Array): Promise<Uint8Array | null> {
-    if (this.aeadKey !== null) {
+    if (this.aeadKey !== null && this.aeadKey !== undefined) {
       return this.aeadKey.decrypt(data);
-    } else {
-      return null;
+    } else if (await this.loadAead()) {
+      return this.aeadKey!.decrypt(data);
     }
+
+    return null;
   }
 
   // TODO: generate random salt 
@@ -77,25 +81,23 @@ export class CryptoService {
   }
 
   private saveAead() {
-    let msg: BackgroundMessage = { action: BackgroundAction.setEncKey, data: this.aeadKey } as BackgroundMessage;
+    let msg: BackgroundMessage = { type: BackgroundAction.setEncKey, data: this.aeadKey } as BackgroundMessage;
     browser.runtime.sendMessage(msg)
   }
 
   private async loadAead(): Promise<boolean> {
-    let msg: BackgroundMessage = { action: BackgroundAction.getEncKey, data: null } as BackgroundMessage;
-    let resp: BackgroundMessage;
+    let msg: BackgroundMessage = { type: BackgroundAction.getEncKey, data: null } as BackgroundMessage;
+    let resp: any;
     
     try {
-      let test = browser.runtime.lastError;
       resp = await browser.runtime.sendMessage(msg);
     } catch (err) {
       console.log("bg response: " + err.message);
       return false;
     }
 
-    if (resp !== undefined && resp.action == BackgroundAction.success && 
-      resp.data !== null) {
-      this.aeadKey = resp.data as aead.Aead;
+    if (resp !== undefined && resp !== null) {
+      this.aeadKey = resp as aead.Aead;
       return true;
     }
 
@@ -156,7 +158,12 @@ export class CryptoService {
     } else if (saltCryptEntry !== undefined && saltEntry !== undefined) {
       // Not first run, both salt and crypt are set, check if they match
       let saltDecrypt: Uint8Array;
-      saltDecrypt = await key.decrypt(saltCryptEntry.value);
+      try {
+        saltDecrypt = await key.decrypt(saltCryptEntry.value);
+      } catch (err) {
+        console.log(err.message);
+        return false;
+      }
 
       return this.compareArray(saltEntry.value, saltDecrypt);
     }

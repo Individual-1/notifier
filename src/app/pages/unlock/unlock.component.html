@@ -1,12 +1,12 @@
 <div class="container">
-    <form [formGroup]="unlockForm" (submit)="submitPass()">
+    <form>
         <label for="passphrase">Enter your passphrase</label>
         <br>
-        <input id="passphrase" type="text" formControlName="passphrase">
+        <input id="passphrase" type="text">
         <br>
         <br>
 
-        <button [disabled]="!unlockForm.valid" color="primary" type="submit">Submit</button>
+        <button color="primary" type="submit" (click)="submitPass()">Submit</button>
     </form>
     <br>
     <div class="tabs">

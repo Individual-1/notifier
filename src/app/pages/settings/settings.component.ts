@@ -16,12 +16,11 @@ export class SettingsComponent implements OnInit {
   settingsForm: FormGroup;
 
   constructor(private fb: FormBuilder, private ref: ChangeDetectorRef, private s: StorageService, private c: CryptoService) {
-    this.initialSettings();
-    this.settingsForm = fb.group({
-    });
+    this.settingsForm = fb.group({});
   }
 
   ngOnInit(): void {
+    this.initialSettings();
   }
 
   async initialSettings() {
@@ -44,6 +43,8 @@ export class SettingsComponent implements OnInit {
     sk.encryptedSettings.forEach(v => {
       this.elements.set(v, { description: sk.descriptions[v], value: 'Encrypted value', enabled: false } as SettingsEntry);
     });
+
+    this.ref.detectChanges();
   }
 
   private async refreshSetting(key: string): Promise<boolean> {
@@ -104,7 +105,7 @@ export class SettingsComponent implements OnInit {
 
     await result;
     if (await this.refreshSetting(key)) {
-      this.ref.markForCheck();
+      this.ref.detectChanges();
     }
 
     entry.enabled = false;

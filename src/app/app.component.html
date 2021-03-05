@@ -7,7 +7,6 @@
         <li><a routerLink="/unlock" routerLinkActive="active">unlock</a></li>
       </ul>
     </nav>
-    <router-outlet></router-outlet>
-    <router-outlet></router-outlet>
+    <router-outlet (activate)="onRouteActivated()"></router-outlet>
   </main>
 </div>

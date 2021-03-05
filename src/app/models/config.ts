@@ -163,16 +163,17 @@ export interface KeyCache {
 
 /*
     Actions we want our background script to take
+
+    Responses are raw primitives because we can't effectively pass data around 
+    between contexts without browser-specific copy methods
 */
 export enum BackgroundAction {
-    error = 1,
-    success,
     startOAuthAuthorization,
     setEncKey,
     getEncKey,
 }
 
 export interface BackgroundMessage {
-    action: BackgroundAction,
+    type: BackgroundAction,
     data: Object | null,
 }
