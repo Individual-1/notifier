@@ -165,12 +165,14 @@ export interface KeyCache {
     Actions we want our background script to take
 */
 export enum BackgroundAction {
-    startOAuthAuthorization = 1,
-    storeEncKey = 2,
-    getEncKey = 3,
+    error = 1,
+    success,
+    startOAuthAuthorization,
+    setEncKey,
+    getEncKey,
 }
 
 export interface BackgroundMessage {
     action: BackgroundAction,
-    data?: Object,
+    data: Object | null,
 }

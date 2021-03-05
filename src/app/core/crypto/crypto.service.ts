@@ -1,10 +1,12 @@
 import { Injectable } from '@angular/core';
 
 import { StorageService } from '@core/storage/storage.service'
-import { ScryptParams as sp, StorageKeys as sk, ConfigArray, ConfigString, KeyCache } from "@models";
+import { ScryptParams as sp, StorageKeys as sk, ConfigArray, ConfigString, KeyCache, BackgroundAction, BackgroundMessage } from "@models";
 
+import { browser } from 'webextension-polyfill-ts';
 import { aead, aeadSubtle } from "tink-crypto";
 import { syncScrypt } from "scrypt-js";
+import { Console } from 'console';
 
 @Injectable({
   providedIn: 'root'
@@ -29,19 +31,10 @@ export class CryptoService {
       return true;
     }
 
-    let cachedKey: KeyCache | undefined;
-    cachedKey = await this.s.getKey();
-
-    if (cachedKey !== undefined) {
-      this.aeadKey = await this.createAEAD(cachedKey.key);
-      return true;
-    }
-
-    return false;
+    return this.loadAead();
   }
 
   public async unlockKey(pw: Uint8Array): Promise<boolean> {
-
     if (await this.isUnlocked()) {
       return true;
     }
@@ -52,7 +45,7 @@ export class CryptoService {
 
     if (valid) {
       this.aeadKey = aKey;
-      this.s.putKey(rKey);
+      this.saveAead();
     }
 
     return valid;
@@ -77,6 +70,36 @@ export class CryptoService {
   // TODO: generate random salt 
   public generateRandomArray(len: number): Uint8Array {
     return Uint8Array.from([0x41]);
+  }
+
+  public isAead(obj: Object): boolean {
+    return true;
+  }
+
+  private saveAead() {
+    let msg: BackgroundMessage = { action: BackgroundAction.setEncKey, data: this.aeadKey } as BackgroundMessage;
+    browser.runtime.sendMessage(msg)
+  }
+
+  private async loadAead(): Promise<boolean> {
+    let msg: BackgroundMessage = { action: BackgroundAction.getEncKey, data: null } as BackgroundMessage;
+    let resp: BackgroundMessage;
+    
+    try {
+      let test = browser.runtime.lastError;
+      resp = await browser.runtime.sendMessage(msg);
+    } catch (err) {
+      console.log("bg response: " + err.message);
+      return false;
+    }
+
+    if (resp !== undefined && resp.action == BackgroundAction.success && 
+      resp.data !== null) {
+      this.aeadKey = resp.data as aead.Aead;
+      return true;
+    }
+
+    return false;
   }
 
   private async retrieveSalt(): Promise<Uint8Array> {
