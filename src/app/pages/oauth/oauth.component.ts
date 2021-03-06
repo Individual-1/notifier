@@ -17,7 +17,6 @@ export class OauthComponent implements OnInit {
   constructor(
     private router: Router,
     private formBuilder: FormBuilder,
-    private t: TokenService
   ) { }
 
   ngOnInit(): void {
@@ -29,7 +28,7 @@ export class OauthComponent implements OnInit {
   }
 
   getRedirectURL(): string {
-    return this.t.getRedirectURL();
+    return browser.identity.getRedirectURL();
   }
 
 }

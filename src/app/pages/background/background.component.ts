@@ -3,9 +3,10 @@ import { CryptoService } from '@core/crypto/crypto.service';
 import { TokenService } from '@core/token/token.service';
 import { browser } from 'webextension-polyfill-ts';
 
-import { BackgroundAction, BackgroundMessage } from '@models';
+import { BackgroundAction, BackgroundMessage, ConfigAction } from '@models';
 
-import { aead } from 'tink-crypto';
+import { StorageService } from '@core/storage/storage.service';
+import { HttpClient } from '@angular/common/http';
 
 @Component({
   selector: 'app-background',
@@ -13,9 +14,14 @@ import { aead } from 'tink-crypto';
   styleUrls: ['./background.component.scss']
 })
 export class BackgroundComponent implements OnInit {
-  cachedAEAD: aead.Aead | null = null;
+  s: StorageService;
+  c: CryptoService;
+  t: TokenService;
 
-  constructor(private c: CryptoService, private t: TokenService) {
+  constructor(private http: HttpClient) {
+    this.s = new StorageService();
+    this.c = new CryptoService(this.s);
+    this.t = new TokenService(this.s, this.c, this.http);
   }
 
   ngOnInit(): void {
@@ -29,17 +35,46 @@ export class BackgroundComponent implements OnInit {
       case BackgroundAction.startOAuthAuthorization:
         this.t.doAuthorize();
         break;
-      case BackgroundAction.setEncKey:
+      case BackgroundAction.encrypt:
         if (msg.data !== null) {
-          this.cachedAEAD = msg.data as aead.Aead;
+          return this.c.encrypt(msg.data as Uint8Array);
         }
         break;
-      case BackgroundAction.getEncKey:
-        if (this.cachedAEAD !== null) {
-          return this.cachedAEAD;
+      case BackgroundAction.decrypt:
+        if (msg.data !== null) {
+          return this.c.decrypt(msg.data as Uint8Array);
         }
         break;
+      case BackgroundAction.getConfigString:
+        if (msg.data !== null) {
+          let cfg: ConfigAction | undefined = await this.s.getConfig(msg.data as string);
+          if (this.s.checkValid(msg.data as string, cfg) && !cfg!.isArray) {
+            return cfg!.value as string;
+          }
+        }
+        break;
+      case BackgroundAction.getConfigArray:
+        if (msg.data !== null) {
+          let cfg: ConfigAction | undefined = await this.s.getConfig(msg.data as string);
+          if (this.s.checkValid(msg.data as string, cfg) && cfg!.isArray) {
+            return cfg!.value as Uint8Array;
+          }
+        }
+        break;
+      case BackgroundAction.putConfig:
+        if (msg.data !== null) {
+          return this.s.putConfig(msg.data as ConfigAction);
+        }
+        break;
+      case BackgroundAction.unlockKey:
+        if (msg.data !== null) {
+          return this.c.unlockKey(msg.data as Uint8Array);
+        }
+        break;
+      case BackgroundAction.isUnlocked:
+        return this.c.isUnlocked();
     }
+
     return null;
   }
 

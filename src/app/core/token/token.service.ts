@@ -3,15 +3,12 @@ import { HttpClient, HttpParams, HttpHeaders } from '@angular/common/http';
 
 import { CryptoService } from '@core/crypto/crypto.service';
 import { StorageService } from '@core/storage/storage.service';
-import { StorageKeys as sk, OAuthParams as op, ConfigArray, ConfigString, OAuthCodeResponse, OAuthCodeRequest } from '@models';
+import { StorageKeys as sk, OAuthParams as op, ConfigAction, OAuthCodeResponse, OAuthCodeRequest } from '@models';
 
 import { browser } from "webextension-polyfill-ts";
 import { toBase64 } from "@aws-sdk/util-base64-browser";
 import { Observable } from 'rxjs';
 
-@Injectable({
-  providedIn: 'root'
-})
 export class TokenService {
   constructor(private s: StorageService, private c: CryptoService, private http: HttpClient) { }
 
@@ -25,12 +22,12 @@ export class TokenService {
   }
 
   public async doAuthorize() {
-    let clientIdEntry: ConfigString | undefined;
+    let clientIdEntry: ConfigAction | undefined;
 
-    clientIdEntry = await this.s.getConfigString(sk.oauthClientId);
+    clientIdEntry = await this.s.getConfig(sk.oauthClientId);
 
-    if (clientIdEntry === undefined) {
-      // TODO: error out because of unset parameters
+    if (clientIdEntry === undefined || clientIdEntry.isArray) {
+      // TODO: error out because of unset parameters or incorrect format
       return;
     }
 
@@ -38,23 +35,23 @@ export class TokenService {
 
     let returnURL: string = "";
     try {
-      returnURL = await this.authorize(clientIdEntry.value, state);
+      returnURL = await this.authorize(clientIdEntry.value as string, state);
     } catch (err) {
       console.log(err.message);
       return;
     }
 
     let parsedURL: URL = new URL(returnURL);
-    let clientSecretEntry: ConfigArray | undefined;
+    let clientSecretEntry: ConfigAction | undefined;
 
-    clientSecretEntry = await this.s.getConfigArray(sk.oauthClientSecret);
+    clientSecretEntry = await this.s.getConfig(sk.oauthClientSecret);
 
-    if (clientSecretEntry === undefined) {
-      // TODO: error out because of unset parameters
+    if (clientSecretEntry === undefined || !clientSecretEntry.isArray) {
+      // TODO: error out because of unset parameters or wrong type
       return;
     }
 
-    let clientSecretArray: Uint8Array | null = await this.c.decrypt(clientSecretEntry.value);
+    let clientSecretArray: Uint8Array | null = await this.c.decrypt(clientSecretEntry.value as Uint8Array);
     if (clientSecretArray === null) {
       // TODO: failed to decrypt client secret
       return;
@@ -80,23 +77,23 @@ export class TokenService {
       return;
     }
 
-    this.retrieveToken(this.genBasicAuth(clientIdEntry.value, clientSecret), code)
+    this.retrieveToken(this.genBasicAuth(clientIdEntry.value as string, clientSecret), code)
     .subscribe(resp => this.saveTokens(resp));
   }
 
   public async doRefresh() {
-    let clientIdEntry: ConfigString | undefined;
-    let clientSecretEntry: ConfigArray | undefined;
+    let clientIdEntry: ConfigAction | undefined;
+    let clientSecretEntry: ConfigAction | undefined;
 
-    clientIdEntry = await this.s.getConfigString(sk.oauthClientId);
-    clientSecretEntry = await this.s.getConfigArray(sk.oauthClientSecret);
+    clientIdEntry = await this.s.getConfig(sk.oauthClientId);
+    clientSecretEntry = await this.s.getConfig(sk.oauthClientSecret);
 
-    if (clientIdEntry === undefined || clientSecretEntry === undefined) {
-      // TODO: error out because of unset parameters
+    if (!this.s.checkValid(sk.oauthClientId, clientIdEntry) || !this.s.checkValid(sk.oauthClientSecret, clientSecretEntry)) {
+      // TODO: error out because of unset parameters or wrong types
       return;
     }
 
-    let clientSecretArray: Uint8Array | null = await this.c.decrypt(clientSecretEntry.value);
+    let clientSecretArray: Uint8Array | null = await this.c.decrypt(clientSecretEntry!.value as Uint8Array);
     if (clientSecretArray === null) {
       // TODO: failed to decrypt client secret
       return;
@@ -104,22 +101,22 @@ export class TokenService {
 
     let clientSecret: string = this.c.decodeArray(clientSecretArray);
 
-    let refreshEntry: ConfigArray | undefined;
+    let refreshEntry: ConfigAction | undefined;
 
-    refreshEntry = await this.s.getConfigArray(sk.refreshToken);
+    refreshEntry = await this.s.getConfig(sk.refreshToken);
 
-    if (refreshEntry === undefined) {
+    if (!this.s.checkValid(sk.refreshToken, refreshEntry)) {
       // TODO: handle error for missing entry
       return;
     }
 
-    let refreshArray: Uint8Array | null = await this.c.decrypt(refreshEntry.value);
+    let refreshArray: Uint8Array | null = await this.c.decrypt(refreshEntry!.value as Uint8Array);
     if (refreshArray === null) {
       // Handle decryption failure
       return;
     }
 
-    this.refreshToken(this.genBasicAuth(clientIdEntry.value, clientSecret), this.c.decodeArray(refreshArray))
+    this.refreshToken(this.genBasicAuth(clientIdEntry!.value as string, clientSecret), this.c.decodeArray(refreshArray))
     .subscribe(resp => this.saveTokens(resp));
   }
 
@@ -174,9 +171,10 @@ export class TokenService {
       let encAccess: Uint8Array | null = await this.c.encrypt(this.c.encodeString(resp.access_token));
 
       if (encAccess !== null) {
-        let newEntry: ConfigArray = {
+        let newEntry: ConfigAction = {
           key: sk.accessToken,
           isEnc: true,
+          isArray: true,
           value: encAccess
         };
 
@@ -189,9 +187,10 @@ export class TokenService {
       let encRefresh: Uint8Array | null = await this.c.encrypt(this.c.encodeString(resp.refresh_token));
 
       if (encRefresh !== null) {
-        let newEntry: ConfigArray = {
+        let newEntry: ConfigAction = {
           key: sk.refreshToken,
           isEnc: true,
+          isArray: true,
           value: encRefresh
         };
 

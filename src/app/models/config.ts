@@ -97,7 +97,15 @@ export class StorageKeys {
         [StorageKeys.oauthClientSecret]: "Reddit OAuth client secret",
         [StorageKeys.accessToken]: "Reddit access token",
         [StorageKeys.refreshToken]: "Reddit refresh token",
-    }
+    };
+    static isArray = {
+        [StorageKeys.salt]: true,
+        [StorageKeys.saltCrypt]: true,
+        [StorageKeys.oauthClientId]: false,
+        [StorageKeys.oauthClientSecret]: true,
+        [StorageKeys.accessToken]: true,
+        [StorageKeys.refreshToken]: true,
+    };
 }
 
 /*
@@ -135,16 +143,11 @@ export class DatabaseParams {
 /*
     Interface for config entries in IndexedDB and how we will represent them elsewhere
 */
-export interface ConfigArray {
+export interface ConfigAction {
     key: string,
     isEnc: boolean, // Whether this config entry is encrypted or not
-    value: Uint8Array,
-}
-
-export interface ConfigString {
-    key: string,
-    isEnc: boolean, // Whether this config entry is encrypted or not
-    value: string,
+    isArray: boolean, // true for Uint8Array, false for string
+    value: Uint8Array | string,
 }
 
 /*
@@ -168,12 +171,17 @@ export interface KeyCache {
     between contexts without browser-specific copy methods
 */
 export enum BackgroundAction {
-    startOAuthAuthorization,
-    setEncKey,
-    getEncKey,
+    startOAuthAuthorization, // data: null - returns void
+    encrypt, // Crypto - data: Uint8Array - returns Uint8Array
+    decrypt, // Crypto - data: Uint8Array - returns Uint8Array
+    getConfigString, // Storage - data: string - returns string
+    getConfigArray, // Storage - data: string - returns Uin8Array
+    putConfig, // Storage - data: ConfigAction - returns string
+    unlockKey, // Crypto - data: Uint8Array - returns boolean
+    isUnlocked, // Crypto - data: null - returns boolean
 }
 
 export interface BackgroundMessage {
     type: BackgroundAction,
-    data: Object | null,
+    data: any | null,
 }

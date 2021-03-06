@@ -11,10 +11,6 @@ import { AppComponent } from './app.component';
 
 import { PagesModule } from './pages/pages.module';
 import { CoreModule } from '@core/core.module';
-import { CryptoService } from '@core/crypto/crypto.service';
-import { StorageService } from '@core/storage/storage.service';
-import { UserService } from '@core/user/user.service';
-import { TokenService } from '@core/token/token.service';
 
 @NgModule({
   declarations: [
@@ -31,7 +27,7 @@ import { TokenService } from '@core/token/token.service';
     HttpClientModule,
     RouterModule,
   ],
-  providers: [CryptoService, StorageService, UserService, TokenService],
+  providers: [],
   bootstrap: [AppComponent]
 })
 export class AppModule { }

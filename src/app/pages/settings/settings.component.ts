@@ -1,9 +1,8 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
-import { FormArray, FormBuilder, FormGroup, Validators, AbstractControl, FormControl } from '@angular/forms';
+import { FormBuilder, FormGroup, AbstractControl } from '@angular/forms';
 
-import { CryptoService } from '@core/crypto/crypto.service';
-import { StorageService } from '@core/storage/storage.service';
-import { ConfigArray, ConfigString, StorageKeys as sk } from '@models';
+import { BackgroundAction, BackgroundMessage, ConfigAction, StorageKeys as sk } from '@models';
+import { browser } from 'webextension-polyfill-ts';
 
 @Component({
   selector: 'app-settings',
@@ -14,8 +13,9 @@ import { ConfigArray, ConfigString, StorageKeys as sk } from '@models';
 export class SettingsComponent implements OnInit {
   elements: Map<string, SettingsEntry> = new Map<string, SettingsEntry>();
   settingsForm: FormGroup;
+  encoder: TextEncoder = new TextEncoder();
 
-  constructor(private fb: FormBuilder, private ref: ChangeDetectorRef, private s: StorageService, private c: CryptoService) {
+  constructor(private fb: FormBuilder, private ref: ChangeDetectorRef) {
     this.settingsForm = fb.group({});
   }
 
@@ -24,7 +24,7 @@ export class SettingsComponent implements OnInit {
   }
 
   async initialSettings() {
-    let plainConfigs: Array<ConfigString | undefined>;
+    let plainConfigs: Array<ConfigAction | undefined>;
 
     this.elements.clear();
 
@@ -32,13 +32,15 @@ export class SettingsComponent implements OnInit {
       this.elements.set(v, { description: sk.descriptions[v], value: "No value set", enabled: false } as SettingsEntry);
     });
 
-    plainConfigs = await this.s.getConfigBulkString(sk.plaintextSettings);
-    plainConfigs.forEach(v => {
-      if (v !== undefined) {
-        let entry: SettingsEntry = { description: sk.descriptions[v.key], value: v.value, enabled: false } as SettingsEntry;
-        this.elements.set(v.key, entry);
+    for (const key in sk.plaintextSettings) {
+      let msg: BackgroundMessage = { type: BackgroundAction.getConfigString, data: key } as BackgroundMessage;
+      let v: string | null = await browser.runtime.sendMessage(msg);
+
+      if (v !== undefined && v !== null) {
+        let entry: SettingsEntry = { description: sk.descriptions[key], value: v, enabled: false } as SettingsEntry;
+        this.elements.set(key, entry);
       }
-    });
+    }
 
     sk.encryptedSettings.forEach(v => {
       this.elements.set(v, { description: sk.descriptions[v], value: 'Encrypted value', enabled: false } as SettingsEntry);
@@ -52,9 +54,10 @@ export class SettingsComponent implements OnInit {
       return false;
     }
 
-    let plainConfig: ConfigString | undefined = await this.s.getConfigString(key);
-    if (plainConfig !== undefined) {
-      let entry: SettingsEntry = { description: sk.descriptions[key], value: plainConfig.value, enabled: false } as SettingsEntry;
+    let msg: BackgroundMessage = { type: BackgroundAction.getConfigString, data: key } as BackgroundMessage;
+    let configValue: string | undefined = await browser.runtime.sendMessage(msg);
+    if (configValue !== undefined) {
+      let entry: SettingsEntry = { description: sk.descriptions[key], value: configValue, enabled: false } as SettingsEntry;
       this.elements.set(key, entry);
     } else {
       return false;
@@ -112,24 +115,27 @@ export class SettingsComponent implements OnInit {
   }
 
   private updatePlaintext(key: string, value: string): Promise<string | null> {
-    let entry: ConfigString = { key: key, isEnc: false, value: value } as ConfigString;
-    return this.s.putConfig(entry);
+    let entry: ConfigAction = { key: key, isEnc: false, isArray: false, value: value } as ConfigAction;
+    let msg: BackgroundMessage = { type: BackgroundAction.putConfig, data: entry } as BackgroundMessage;
+    return browser.runtime.sendMessage(msg);
   }
 
   private async updateEncrypted(key: string, value: string): Promise<string | null> {
-    let encArr: Uint8Array | null = await this.c.encrypt(this.c.encodeString(value));
+    let encMsg: BackgroundMessage = { type: BackgroundAction.encrypt, data: this.encoder.encode(value) } as BackgroundMessage;
+    let encAny: any | null = await browser.runtime.sendMessage(encMsg);
 
-    if (encArr === null) {
+    if (encAny === null) {
       // TODO: handle error or something
       return null;
     }
 
-    let entry: ConfigArray = { key: key, isEnc: true, value: encArr } as ConfigArray;
-    return this.s.putConfig(entry);
+    let encArr: Uint8Array = encAny as Uint8Array;
+    let entry: ConfigAction = { key: key, isEnc: true, isArray: true, value: encArr } as ConfigAction;
+    let msg: BackgroundMessage = { type: BackgroundAction.putConfig, data: entry } as BackgroundMessage;
+    return browser.runtime.sendMessage(msg);
   }
 
   displayedColumns: string[] = ['key', 'description', 'value'];
-
 }
 
 interface SettingsEntry {

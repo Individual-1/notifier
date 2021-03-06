@@ -1,8 +1,8 @@
 <div class="container">
-        <form [formGroup]="authForm" (submit)="startAuth()">
+        <form>
             <label>Authorize access to your Reddit account</label>
             <br />
-            <button type="submit">Authorize</button>
+            <button type="submit" (click)="startAuth()">Authorize</button>
         </form>
         <div>
         <p>Haven't configured Reddit OAuth?<br>

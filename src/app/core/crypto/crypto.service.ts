@@ -1,15 +1,10 @@
-import { Injectable } from '@angular/core';
-
 import { StorageService } from '@core/storage/storage.service'
-import { ScryptParams as sp, StorageKeys as sk, ConfigArray, ConfigString, KeyCache, BackgroundAction, BackgroundMessage } from "@models";
+import { ScryptParams as sp, StorageKeys as sk, ConfigAction, KeyCache, BackgroundAction, BackgroundMessage } from "@models";
 
 import { browser } from 'webextension-polyfill-ts';
 import { aead, aeadSubtle } from "tink-crypto";
 import { syncScrypt } from "scrypt-js";
 
-@Injectable({
-  providedIn: 'root'
-})
 export class CryptoService {
   private aeadKey: aead.Aead | null = null;
   private encoder: TextEncoder = new TextEncoder();
@@ -30,7 +25,7 @@ export class CryptoService {
       return true;
     }
 
-    return this.loadAead();
+    return false;
   }
 
   public async unlockKey(pw: Uint8Array): Promise<boolean> {
@@ -44,7 +39,6 @@ export class CryptoService {
 
     if (valid) {
       this.aeadKey = aKey;
-      this.saveAead();
     }
 
     return valid;
@@ -53,19 +47,14 @@ export class CryptoService {
   public async encrypt(data: Uint8Array): Promise<Uint8Array | null> {
     if (this.aeadKey !== null && this.aeadKey !== undefined) {
       return this.aeadKey.encrypt(data);
-    } else {
-      if (await this.loadAead()) {
-        return this.aeadKey!.encrypt(data);
-      }
-      return null;
     }
+
+    return null;
   }
 
   public async decrypt(data: Uint8Array): Promise<Uint8Array | null> {
     if (this.aeadKey !== null && this.aeadKey !== undefined) {
       return this.aeadKey.decrypt(data);
-    } else if (await this.loadAead()) {
-      return this.aeadKey!.decrypt(data);
     }
 
     return null;
@@ -80,48 +69,25 @@ export class CryptoService {
     return true;
   }
 
-  private saveAead() {
-    let msg: BackgroundMessage = { type: BackgroundAction.setEncKey, data: this.aeadKey } as BackgroundMessage;
-    browser.runtime.sendMessage(msg)
-  }
-
-  private async loadAead(): Promise<boolean> {
-    let msg: BackgroundMessage = { type: BackgroundAction.getEncKey, data: null } as BackgroundMessage;
-    let resp: any;
-    
-    try {
-      resp = await browser.runtime.sendMessage(msg);
-    } catch (err) {
-      console.log("bg response: " + err.message);
-      return false;
-    }
-
-    if (resp !== undefined && resp !== null) {
-      this.aeadKey = resp as aead.Aead;
-      return true;
-    }
-
-    return false;
-  }
-
   private async retrieveSalt(): Promise<Uint8Array> {
-    let saltEntry: ConfigArray | undefined;
+    let saltEntry: ConfigAction | undefined;
     let salt: Uint8Array;
 
-    saltEntry = await this.s.getConfigArray(sk.salt);
+    saltEntry = await this.s.getConfig(sk.salt);
 
     if (saltEntry === undefined) {
       salt = this.generateRandomArray(32);
-      let newEntry: ConfigArray = {
+      let newEntry: ConfigAction = {
         key: sk.salt,
         isEnc: false,
+        isArray: true,
         value: salt,
       };
 
       await this.s.deleteEncryptedConfig();
       await this.s.putConfig(newEntry);
     } else {
-      salt = saltEntry.value;
+      salt = saltEntry.value as Uint8Array;
     }
 
     return salt;
@@ -138,34 +104,35 @@ export class CryptoService {
   }
 
   private async testKey(key: aead.Aead): Promise<boolean> {
-    let saltEntry: ConfigArray | undefined;
-    let saltCryptEntry: ConfigArray | undefined;
+    let saltEntry: ConfigAction | undefined;
+    let saltCryptEntry: ConfigAction | undefined;
 
-    saltEntry = await this.s.getConfigArray(sk.salt);
-    saltCryptEntry = await this.s.getConfigArray(sk.saltCrypt);
+    saltEntry = await this.s.getConfig(sk.salt);
+    saltCryptEntry = await this.s.getConfig(sk.saltCrypt);
 
-    if (saltCryptEntry === undefined && saltEntry !== undefined) {
+    if (saltCryptEntry === undefined && saltEntry !== undefined && saltEntry.isArray) {
       // Check if first run with salt, salt will be set but not crypt
-      let saltCrypt: Uint8Array = await key.encrypt(saltEntry.value);
-      let newEntry: ConfigArray = {
+      let saltCrypt: Uint8Array = await key.encrypt(saltEntry.value as Uint8Array);
+      let newEntry: ConfigAction = {
         key: sk.saltCrypt,
         isEnc: true,
+        isArray: true,
         value: saltCrypt
       }
 
       this.s.putConfig(newEntry);
       return true;
-    } else if (saltCryptEntry !== undefined && saltEntry !== undefined) {
+    } else if (saltCryptEntry !== undefined && saltEntry !== undefined && saltEntry.isArray) {
       // Not first run, both salt and crypt are set, check if they match
       let saltDecrypt: Uint8Array;
       try {
-        saltDecrypt = await key.decrypt(saltCryptEntry.value);
+        saltDecrypt = await key.decrypt(saltCryptEntry.value as Uint8Array);
       } catch (err) {
         console.log(err.message);
         return false;
       }
 
-      return this.compareArray(saltEntry.value, saltDecrypt);
+      return saltEntry.isArray && this.compareArray(saltEntry.value as Uint8Array, saltDecrypt);
     }
 
     return false;
