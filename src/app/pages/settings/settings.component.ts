@@ -1,8 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { FormBuilder, FormGroup, AbstractControl } from '@angular/forms';
 
-import { BackgroundAction, BackgroundMessage, ConfigAction, StorageKeys as sk } from '@models';
-import { browser } from 'webextension-polyfill-ts';
+import { BackgroundAction as ba, BackgroundMessage as bm, BackgroundDataType as bt, ConfigAction, StorageKeys as sk, sendBackgroundMessage } from '@models';
 
 @Component({
   selector: 'app-settings',
@@ -33,8 +32,8 @@ export class SettingsComponent implements OnInit {
     });
 
     for (const key in sk.plaintextSettings) {
-      let msg: BackgroundMessage = { type: BackgroundAction.getConfigString, data: key } as BackgroundMessage;
-      let v: string | null = await browser.runtime.sendMessage(msg);
+      let msg: bm = { action: ba.getConfigString, type: bt.string, data: key } as bm;
+      let v: string | null = await sendBackgroundMessage(msg);
 
       if (v !== undefined && v !== null) {
         let entry: SettingsEntry = { description: sk.descriptions[key], value: v, enabled: false } as SettingsEntry;
@@ -54,8 +53,9 @@ export class SettingsComponent implements OnInit {
       return false;
     }
 
-    let msg: BackgroundMessage = { type: BackgroundAction.getConfigString, data: key } as BackgroundMessage;
-    let configValue: string | undefined = await browser.runtime.sendMessage(msg);
+    let msg: bm = { action: ba.getConfigString, type: bt.string, data: key } as bm;
+
+    let configValue: string | undefined = await sendBackgroundMessage(msg);
     if (configValue !== undefined) {
       let entry: SettingsEntry = { description: sk.descriptions[key], value: configValue, enabled: false } as SettingsEntry;
       this.elements.set(key, entry);
@@ -116,13 +116,15 @@ export class SettingsComponent implements OnInit {
 
   private updatePlaintext(key: string, value: string): Promise<string | null> {
     let entry: ConfigAction = { key: key, isEnc: false, isArray: false, value: value } as ConfigAction;
-    let msg: BackgroundMessage = { type: BackgroundAction.putConfig, data: entry } as BackgroundMessage;
-    return browser.runtime.sendMessage(msg);
+    let msg: bm = { action: ba.putConfig, type: bt.ConfigAction, data: entry } as bm;
+
+    return sendBackgroundMessage(msg);
   }
 
   private async updateEncrypted(key: string, value: string): Promise<string | null> {
-    let encMsg: BackgroundMessage = { type: BackgroundAction.encrypt, data: this.encoder.encode(value) } as BackgroundMessage;
-    let encAny: any | null = await browser.runtime.sendMessage(encMsg);
+    let encMsg: bm = { action: ba.encrypt, type: bt.Uint8Array, data: this.encoder.encode(value) } as bm;
+
+    let encAny: any | null = await sendBackgroundMessage(encMsg);
 
     if (encAny === null) {
       // TODO: handle error or something
@@ -131,8 +133,9 @@ export class SettingsComponent implements OnInit {
 
     let encArr: Uint8Array = encAny as Uint8Array;
     let entry: ConfigAction = { key: key, isEnc: true, isArray: true, value: encArr } as ConfigAction;
-    let msg: BackgroundMessage = { type: BackgroundAction.putConfig, data: entry } as BackgroundMessage;
-    return browser.runtime.sendMessage(msg);
+    let msg: bm = { action: ba.putConfig, type: bt.Uint8Array, data: entry } as bm;
+
+    return sendBackgroundMessage(msg);
   }
 
   displayedColumns: string[] = ['key', 'description', 'value'];

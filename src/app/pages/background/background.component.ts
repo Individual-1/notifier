@@ -3,7 +3,7 @@ import { CryptoService } from '@core/crypto/crypto.service';
 import { TokenService } from '@core/token/token.service';
 import { browser } from 'webextension-polyfill-ts';
 
-import { BackgroundAction, BackgroundMessage, ConfigAction } from '@models';
+import { BackgroundAction, BackgroundMessage, ConfigAction, deserializeMessage } from '@models';
 
 import { StorageService } from '@core/storage/storage.service';
 import { HttpClient } from '@angular/common/http';
@@ -30,8 +30,15 @@ export class BackgroundComponent implements OnInit {
     });
   }
 
-  private async handleMessage(msg: BackgroundMessage): Promise<any> {
-    switch (msg.type) {
+  // TODO: we can't pass complex objects or non-string, we need to convert everything to string
+  private async handleMessage(jsonMsg: string): Promise<any> {
+    let msg: BackgroundMessage | null = deserializeMessage(jsonMsg);
+
+    if (msg === null) {
+      return null;
+    }
+
+    switch (msg.action) {
       case BackgroundAction.startOAuthAuthorization:
         this.t.doAuthorize();
         break;

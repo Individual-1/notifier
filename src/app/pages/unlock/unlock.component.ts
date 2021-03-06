@@ -2,8 +2,7 @@ import { ApplicationRef, ChangeDetectorRef, Component, OnInit } from '@angular/c
 import { AbstractControl, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 
-import { BackgroundAction, BackgroundMessage } from '@models';
-import { browser } from 'webextension-polyfill-ts';
+import { BackgroundAction, BackgroundDataType, BackgroundMessage, sendBackgroundMessage } from '@models';
 
 @Component({
   selector: 'app-unlock',
@@ -29,8 +28,8 @@ export class UnlockComponent implements OnInit {
     document.addEventListener('keyup', () => this.a.tick());
     document.addEventListener('keypress', () => this.a.tick());
 
-    let msg: BackgroundMessage = { type: BackgroundAction.isUnlocked, data: null } as BackgroundMessage;
-    let resp: boolean | null = await browser.runtime.sendMessage(msg);
+    let msg: BackgroundMessage = { action: BackgroundAction.isUnlocked, type: BackgroundDataType.null, data: null } as BackgroundMessage;
+    let resp: boolean | null = await sendBackgroundMessage(msg);
 
     if (resp !== undefined && resp !== null && resp) {
       this.router.navigate(['/']);
@@ -48,9 +47,9 @@ export class UnlockComponent implements OnInit {
     if (pwControl !== null) {
       let enc: TextEncoder = new TextEncoder();
       let pw: Uint8Array = enc.encode(pwControl.value);
-      let msg: BackgroundMessage = { type: BackgroundAction.unlockKey, data: pw } as BackgroundMessage;
+      let msg: BackgroundMessage = { action: BackgroundAction.unlockKey, type: BackgroundDataType.Uint8Array, data: pw } as BackgroundMessage;
       try {
-      let success: boolean | null = await browser.runtime.sendMessage(msg);
+      let success: boolean | null = await sendBackgroundMessage(msg);
         if (success !== undefined && success !== null && success) this.redirectHome();
       } catch (e) {
         this.hintMsg = e.name + ": " + e.message;

@@ -1,7 +1,8 @@
+import { browser } from "webextension-polyfill-ts";
+
 /*
     Scrypt default parameters
 */
-
 export class ScryptParams {
     static scryptN: number = 16384;
     static scryptR: number = 8;
@@ -132,11 +133,9 @@ export class DatabaseParams {
     static dbName: string = "rdb";
     static configTable: string = "config";
     static userTable: string = "users";
-    static keyCache: string = "enc";
     static schema: { [tableName: string]: string | null; } = {
         [DatabaseParams.configTable]: '&key', // Unique index on name of the key
         [DatabaseParams.userTable]: '&userName, &fullName', // Unique index on username and fullname
-        [DatabaseParams.keyCache]: '&id',
     };
 }
 
@@ -148,6 +147,34 @@ export interface ConfigAction {
     isEnc: boolean, // Whether this config entry is encrypted or not
     isArray: boolean, // true for Uint8Array, false for string
     value: Uint8Array | string,
+}
+
+function serializeConfig(action: ConfigAction): string {
+    if (action.isArray) {
+        return JSON.stringify(action, stringifyTypedArray);
+    } else {
+        return JSON.stringify(action);
+    }
+}
+
+function deserializeConfig(jsonAction: string): ConfigAction | null {
+    if (jsonAction === undefined || jsonAction === null) {
+        return null;
+    }
+    
+    let parsed: Object = JSON.parse(jsonAction);
+
+    if (!parsed.hasOwnProperty('key') || !parsed.hasOwnProperty('isEnc') ||
+        !parsed.hasOwnProperty('isArray') || !parsed.hasOwnProperty('value')) {
+        return null;
+    }
+
+    let parsedCfg: ConfigAction = parsed as ConfigAction;
+    if (parsedCfg.isArray) {
+        parsedCfg.value = Uint8Array.from(parsedCfg.value as any);
+    }
+
+    return parsedCfg;
 }
 
 /*
@@ -175,13 +202,116 @@ export enum BackgroundAction {
     encrypt, // Crypto - data: Uint8Array - returns Uint8Array
     decrypt, // Crypto - data: Uint8Array - returns Uint8Array
     getConfigString, // Storage - data: string - returns string
-    getConfigArray, // Storage - data: string - returns Uin8Array
+    getConfigArray, // Storage - data: string - returns Uint8Array
     putConfig, // Storage - data: ConfigAction - returns string
     unlockKey, // Crypto - data: Uint8Array - returns boolean
     isUnlocked, // Crypto - data: null - returns boolean
 }
 
+export enum BackgroundDataType {
+    null, // null
+    string, // string
+    Uint8Array, // Uint8Array
+    ConfigAction, // ConfigAction
+}
+
+interface NumberMap {
+    [key: number]: number;
+}
+
+let BackgroundActionType: NumberMap = {
+    [BackgroundAction.startOAuthAuthorization]: BackgroundDataType.null,
+    [BackgroundAction.encrypt]: BackgroundDataType.Uint8Array,
+    [BackgroundAction.decrypt]: BackgroundDataType.Uint8Array,
+    [BackgroundAction.getConfigString]: BackgroundDataType.string,
+    [BackgroundAction.getConfigArray]: BackgroundDataType.string,
+    [BackgroundAction.putConfig]: BackgroundDataType.ConfigAction,
+    [BackgroundAction.unlockKey]: BackgroundDataType.Uint8Array,
+    [BackgroundAction.isUnlocked]: BackgroundDataType.null,
+}
+
 export interface BackgroundMessage {
-    type: BackgroundAction,
+    action: BackgroundAction,
+    type: BackgroundDataType,
     data: any | null,
+}
+
+export async function sendBackgroundMessage(msg: BackgroundMessage): Promise<any> {
+    let sMsg: string | null = serializeMessage(msg);
+
+    if (sMsg === null) {
+        return null;        
+    }
+
+    return browser.runtime.sendMessage(sMsg);
+}
+
+// Serialize a BackgroundMessage type into a JSON string
+function serializeMessage(msg: BackgroundMessage): string | null {
+    if (!BackgroundActionType.hasOwnProperty(msg.action) ||
+            !(BackgroundActionType[msg.action] == msg.type)) {
+        return null;
+    }
+
+    switch (msg.type) {
+        case BackgroundDataType.null:
+            return JSON.stringify(msg);
+        case BackgroundDataType.string:
+            return JSON.stringify(msg);
+        case BackgroundDataType.Uint8Array:
+            return JSON.stringify(msg, stringifyTypedArray);
+        case BackgroundDataType.ConfigAction:
+            let cfgStr: string = serializeConfig(msg.data as ConfigAction);
+            msg.data = cfgStr;
+            return JSON.stringify(msg);
+    }
+}
+
+// Deserialize a BackgroundMessage type from JSON string
+export function deserializeMessage(jsonMsg: string): BackgroundMessage | null {
+    if (jsonMsg === undefined || jsonMsg === null) {
+        return null;
+    }
+
+    let parsed: Object = JSON.parse(jsonMsg);
+
+    if (!parsed.hasOwnProperty('action') || !parsed.hasOwnProperty('type') || !parsed.hasOwnProperty('data')) {
+        return null;
+    }
+
+    let parsedMsg: BackgroundMessage = parsed as BackgroundMessage;
+
+    if (!BackgroundActionType.hasOwnProperty(parsedMsg.action) ||
+            !(BackgroundActionType[parsedMsg.action] == parsedMsg.type)) {
+        return null;
+    }
+
+    switch (parsedMsg.type) {
+        case BackgroundDataType.null:
+            parsedMsg.data = null;
+            break;
+        case BackgroundDataType.string:
+            break;
+        case BackgroundDataType.Uint8Array:
+            parsedMsg.data = Uint8Array.from(parsedMsg.data);
+            break;
+        case BackgroundDataType.ConfigAction:
+            let cfg: ConfigAction | null = deserializeConfig(parsedMsg.data as string);
+            if (cfg === null) {
+                return null;
+            }
+
+            parsedMsg.data = cfg;
+            break;
+    }
+
+    return parsedMsg;
+}
+
+function stringifyTypedArray(key: any, value: any) {
+    if (ArrayBuffer.isView(value)) {
+        return Array.from(value as Uint8Array);
+    } else {
+        return value;
+    }
 }

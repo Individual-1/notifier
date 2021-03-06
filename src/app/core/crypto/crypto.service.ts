@@ -1,7 +1,6 @@
 import { StorageService } from '@core/storage/storage.service'
-import { ScryptParams as sp, StorageKeys as sk, ConfigAction, KeyCache, BackgroundAction, BackgroundMessage } from "@models";
+import { ScryptParams as sp, StorageKeys as sk, ConfigAction } from "@models";
 
-import { browser } from 'webextension-polyfill-ts';
 import { aead, aeadSubtle } from "tink-crypto";
 import { syncScrypt } from "scrypt-js";
 
