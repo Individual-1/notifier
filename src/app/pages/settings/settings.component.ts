@@ -23,8 +23,6 @@ export class SettingsComponent implements OnInit {
   }
 
   async initialSettings() {
-    let plainConfigs: Array<ConfigAction | undefined>;
-
     this.elements.clear();
 
     sk.plaintextSettings.forEach(v => {
@@ -82,6 +80,7 @@ export class SettingsComponent implements OnInit {
     exists.setValue(entry.value);
 
     entry.enabled = true;
+    this.ref.detectChanges();
   }
 
   async updateSetting(key: string, entry: SettingsEntry) {
@@ -107,11 +106,10 @@ export class SettingsComponent implements OnInit {
     }
 
     await result;
-    if (await this.refreshSetting(key)) {
-      this.ref.detectChanges();
-    }
+    await this.refreshSetting(key);
 
     entry.enabled = false;
+    this.ref.detectChanges();
   }
 
   private updatePlaintext(key: string, value: string): Promise<string | null> {
@@ -133,7 +131,7 @@ export class SettingsComponent implements OnInit {
 
     let encArr: Uint8Array = encAny as Uint8Array;
     let entry: ConfigAction = { key: key, isEnc: true, isArray: true, value: encArr } as ConfigAction;
-    let msg: bm = { action: ba.putConfig, type: bt.Uint8Array, data: entry } as bm;
+    let msg: bm = { action: ba.putConfig, type: bt.ConfigAction, data: entry } as bm;
 
     return sendBackgroundMessage(msg);
   }

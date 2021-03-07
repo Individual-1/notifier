@@ -7,6 +7,7 @@ import { BackgroundAction, BackgroundMessage, ConfigAction, deserializeMessage }
 
 import { StorageService } from '@core/storage/storage.service';
 import { HttpClient } from '@angular/common/http';
+import { UserService } from '@core/user/user.service';
 
 @Component({
   selector: 'app-background',
@@ -17,11 +18,13 @@ export class BackgroundComponent implements OnInit {
   s: StorageService;
   c: CryptoService;
   t: TokenService;
+  u: UserService;
 
   constructor(private http: HttpClient) {
     this.s = new StorageService();
     this.c = new CryptoService(this.s);
     this.t = new TokenService(this.s, this.c, this.http);
+    this.u = new UserService(this.s, this.c, this.http);
   }
 
   ngOnInit(): void {
@@ -80,6 +83,8 @@ export class BackgroundComponent implements OnInit {
         break;
       case BackgroundAction.isUnlocked:
         return this.c.isUnlocked();
+      case BackgroundAction.getAllUsers:
+        return this.u.serializeAllUsers();
     }
 
     return null;
