@@ -24,7 +24,7 @@ export class ScryptParams {
 export class OAuthParams {
   static authURL: string = "https://www.reddit.com/api/v1/authorize";
   static tokenURL: string = "https://www.reddit.com/api/v1/access_token";
-  static scopes: Array<string> = ["identity", "history"];
+  static scopes: Array<string> = ["identity", "history", "read"];
   static responseType: string = "code";
   static duration: string = "permanent";
 }
@@ -50,12 +50,23 @@ export interface OAuthRefreshRequest {
 }
 
 export class RedditParams {
-  static baseURL: string = "https://api.reddit.com";
+  static baseURL: string = "https://oauth.reddit.com";
   static userBase: string = "/user/";
   static submitted: string = "/submitted";
   static comments: string = "/comments";
+  static about: string = "/about";
   static overview: string = "overview";
   static userAgent: string = "web:usernotify:0.1";
+}
+
+export interface AboutResponse {
+  kind: string,
+  data: AboutData
+}
+
+export interface AboutData {
+  id: string,
+  name: string,
 }
 
 /*
@@ -197,7 +208,7 @@ export interface User {
   comments: boolean,
 }
 
-export function serializeUser(user: User): string | null {
+export function serializeUser(user: User): string {
   return JSON.stringify(user);
 }
 
@@ -231,6 +242,8 @@ export enum BackgroundAction {
   unlockKey, // Crypto - data: Uint8Array - returns boolean
   isUnlocked, // Crypto - data: null - returns boolean
   getAllUsers, // Users - data: null - returns User[]
+  removeUser, // Users - data: string - returns boolean
+  addUser, // Users - data: User - returns boolean
 }
 
 export enum BackgroundDataType {
@@ -238,6 +251,7 @@ export enum BackgroundDataType {
   string, // string
   Uint8Array, // Uint8Array
   ConfigAction, // ConfigAction
+  User, // User
 }
 
 interface NumberMap {
@@ -254,6 +268,8 @@ let BackgroundActionType: NumberMap = {
   [BackgroundAction.unlockKey]: BackgroundDataType.Uint8Array,
   [BackgroundAction.isUnlocked]: BackgroundDataType.null,
   [BackgroundAction.getAllUsers]: BackgroundDataType.null,
+  [BackgroundAction.removeUser]: BackgroundDataType.string,
+  [BackgroundAction.addUser]: BackgroundDataType.User,
 }
 
 export interface BackgroundMessage {
@@ -289,6 +305,10 @@ function serializeMessage(msg: BackgroundMessage): string | null {
     case BackgroundDataType.ConfigAction:
       let cfgStr: string = serializeConfig(msg.data as ConfigAction);
       msg.data = cfgStr;
+      return JSON.stringify(msg);
+    case BackgroundDataType.User:
+      let userStr: string = serializeUser(msg.data as User);
+      msg.data = userStr;
       return JSON.stringify(msg);
   }
 }
@@ -328,6 +348,14 @@ export function deserializeMessage(jsonMsg: string): BackgroundMessage | null {
       }
 
       parsedMsg.data = cfg;
+      break;
+    case BackgroundDataType.User:
+      let user: User | null = deserializeUser(parsedMsg.data as string);
+      if (user === null) {
+        return null;
+      }
+
+      parsedMsg.data = user;
       break;
   }
 

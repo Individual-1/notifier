@@ -1,22 +1,19 @@
 <div [formGroup]="usersForm">
-    <table>
-        <tr>
-            <td>Username</td>
-            <td>Fullname</td>
-            <td>LastPost</td>
-        </tr>
-        <tr *ngFor="let element of elements | keyvalue">
-            <td>{{ element.key }}</td>
-            <td>{{ element.value.description }}</td>
-            <td>
-                <button *ngIf="element.value.enabled" (click)="element.value.enabled = false"
-                    ng-click="cancel()">Cancel</button>
-                <button *ngIf="element.value.enabled" (click)="updateSetting(element.key, element.value)" type="submit">Save</button>
-                <a *ngIf="!element.value.enabled" (click)="enableEdit(element.key, element.value)">
-                    <i class="material-icons" uib-tooltip="Edit" tooltip-trigger="mouseenter"
-                        tooltip-append-to-body="true" tooltip-placement="left">create</i>
-                </a>
-            </td>
-        </tr>
-    </table>
+  <a (click)="enableAdd = true;"><i class="material-icons" uib-tooltip="Add user" tooltip-triggers="mouseenter"
+    tooltip-append-to-body="true" tooltip-placement="left">add</i></a>
+  <input type="checkbox" [checked]="friendsEnabled" (click)="toggleFriends()">
+  <table>
+    <tr>
+      <td>Followed Users</td>
+    </tr>
+    <tr *ngFor="let user of users">
+      <td>{{ user }}</td>
+      <td>
+        <a (click)="removeUser(user)">
+          <i class="material-icons" uib-tooltip="Remove User" tooltip-trigger="mouseenter"
+            tooltip-append-to-body="true" tooltip-placement="left">remove</i>
+        </a>
+      </td>
+    </tr>
+  </table>
 </div>

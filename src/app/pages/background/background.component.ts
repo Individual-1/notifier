@@ -24,7 +24,7 @@ export class BackgroundComponent implements OnInit {
     this.s = new StorageService();
     this.c = new CryptoService(this.s);
     this.t = new TokenService(this.s, this.c, this.http);
-    this.u = new UserService(this.s, this.c, this.http);
+    this.u = new UserService(this.s, this.c, this.t, this.http);
   }
 
   ngOnInit(): void {
@@ -85,6 +85,10 @@ export class BackgroundComponent implements OnInit {
         return this.c.isUnlocked();
       case BackgroundAction.getAllUsers:
         return this.u.serializeAllUsers();
+      case BackgroundAction.removeUser:
+        if (msg.data !== null) {
+          this.u.removeUser(msg.data as string);
+        }
     }
 
     return null;

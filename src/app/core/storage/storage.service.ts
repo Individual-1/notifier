@@ -1,5 +1,4 @@
-import { Injectable } from '@angular/core';
-import { StorageKeys as sk, DatabaseParams as dp, ConfigAction, User, KeyCache } from "@models";
+import { StorageKeys as sk, DatabaseParams as dp, ConfigAction, User } from "@models";
 
 import { Dexie } from "dexie";
 
@@ -73,6 +72,10 @@ export class StorageService {
 
   public putUser(entry: User): Promise<string> {
     return this.db[dp.userTable].put(entry);
+  }
+
+  public deleteUser(key: string): Promise<void> {
+    return this.db[dp.userTable].delete(key);
   }
 
 }

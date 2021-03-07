@@ -8,6 +8,7 @@ import { OauthComponent } from './pages/oauth/oauth.component';
 import { LockedGuard } from '@core/locked/locked.guard';
 import { BackgroundComponent } from './pages/background/background.component';
 import { PageRouterGuard } from '@core/page-router/page-router.guard';
+import { UsersComponent } from './pages/users/users.component';
 
 const routes: Routes = [
   {
@@ -36,6 +37,11 @@ const routes: Routes = [
   {
     path: 'authorize',
     component: OauthComponent,
+    canActivate: [LockedGuard]
+  },
+  {
+    path: 'users',
+    component: UsersComponent,
     canActivate: [LockedGuard]
   },
   {
