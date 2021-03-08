@@ -1,6 +1,13 @@
 <div [formGroup]="usersForm">
   <a (click)="enableAdd = true;"><i class="material-icons" uib-tooltip="Add user" tooltip-triggers="mouseenter"
     tooltip-append-to-body="true" tooltip-placement="left">add</i></a>
+    <div *ngIf="enableAdd">
+      <input type="text" formControlName="usernameInput" placeholder="">
+      <div>
+        <div class="inline-block-child"><button (click)="enableAdd = false;">Cancel</button></div>
+        <div class="inline-block-child"><button (click)="addUser()">Save</button></div>
+      </div>
+    </div>
   <input type="checkbox" [checked]="friendsEnabled" (click)="toggleFriends()">
   <table>
     <tr>
