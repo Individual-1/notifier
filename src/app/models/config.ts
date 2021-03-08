@@ -142,11 +142,6 @@ export class StorageKeys {
   storing historical messages (yet) and will instead just point to the profile link.
 
   schema: userName (primary key) | fullName (string) | lastPost (string)
-
-  The third is grudgingly a cache of the encryption key due to extensions constantly being loaded and unloaded.
-  We need to keep the key cached until the window is closed (or expiry? TBD)
-
-  schema: id (1) | key (Uint8Array) | expiry (Unused)
 */
 
 export class DatabaseParams {

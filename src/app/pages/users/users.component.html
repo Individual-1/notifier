@@ -1,14 +1,27 @@
-<div [formGroup]="usersForm">
-  <a (click)="enableAdd = true;"><i class="material-icons" uib-tooltip="Add user" tooltip-triggers="mouseenter"
-    tooltip-append-to-body="true" tooltip-placement="left">add</i></a>
+<div>
+  <form [formGroup]="usersForm">
+    <a (click)="enableEdit()"><i class="material-icons" uib-tooltip="Add user" tooltip-triggers="mouseenter"
+        tooltip-append-to-body="true" tooltip-placement="left">add</i></a>
     <div *ngIf="enableAdd">
-      <input type="text" formControlName="usernameInput" placeholder="">
+      <label for="usernameInput">Username</label>
+      <input type="text" formControlName="usernameInput" id="usernameInput" placeholder="">
+      <br>
       <div>
-        <div class="inline-block-child"><button (click)="enableAdd = false;">Cancel</button></div>
-        <div class="inline-block-child"><button (click)="addUser()">Save</button></div>
+        <label for="commentCheck">Comments</label>
+        <div class="inline-block-child"><input type="checkbox" formControlName="commentCheck" id="commentCheck" [checked]="commentEnabled" (click)="toggleComment()"></div>
+        <label for="submitCheck">Submissions</label>
+        <div class="inline-block-child"><input type="checkbox" formControlName="submissionCheck" id="submitCheck" [checked]="submissionEnabled" (click)="toggleSubmission()"></div>
+      </div>
+      <div>
+        <div class="inline-block-child"><button (click)="cancelEdit()">Cancel</button></div>
       </div>
     </div>
-  <input type="checkbox" [checked]="friendsEnabled" (click)="toggleFriends()">
+    <br>
+    <label for="friendsToggle">Enable friends tracking</label>
+    <input type="checkbox" formControlName="friendsToggle" id="friendsToggle" [checked]="friendsInput"
+      (click)="toggleFriends()">
+    <button [disabled]="friendsInput == friendsEnabled && (!enableAdd || !usersForm.valid || !(commentEnabled || submissionEnabled))" (click)="submitChanges()">Submit</button>
+  </form>
   <table>
     <tr>
       <td>Followed Users</td>
@@ -17,8 +30,8 @@
       <td>{{ user }}</td>
       <td>
         <a (click)="removeUser(user)">
-          <i class="material-icons" uib-tooltip="Remove User" tooltip-trigger="mouseenter"
-            tooltip-append-to-body="true" tooltip-placement="left">remove</i>
+          <i class="material-icons" uib-tooltip="Remove User" tooltip-trigger="mouseenter" tooltip-append-to-body="true"
+            tooltip-placement="left">remove</i>
         </a>
       </td>
     </tr>

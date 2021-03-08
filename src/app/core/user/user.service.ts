@@ -62,6 +62,10 @@ export class UserService {
       return false;
     }
 
+    if (userName == "friends") {
+      return this.disableFriends()
+    }
+
     try {
       await this.s.deleteUser(userName);
       this.users.delete(userName);
@@ -71,9 +75,17 @@ export class UserService {
     }
   }
 
+  public async disableFriends(): Promise<boolean> {
+    return false;
+  }
+
   public async addUser(user: User): Promise<boolean> {
     if (this.users.has(user.userName)) {
       return false;
+    }
+
+    if (user.userName == "friends") {
+      return this.enableFriends();
     }
 
     let userExtra: User | null = await this.getUserInfo(user.userName);
@@ -91,6 +103,10 @@ export class UserService {
     }
 
     return true;
+  }
+
+  public async enableFriends(): Promise<boolean> {
+    return false;
   }
 
   public async getUserInfo(userName: string): Promise<User | null> {

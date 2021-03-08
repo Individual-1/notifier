@@ -3,7 +3,7 @@ import { CryptoService } from '@core/crypto/crypto.service';
 import { TokenService } from '@core/token/token.service';
 import { browser } from 'webextension-polyfill-ts';
 
-import { BackgroundAction, BackgroundMessage, ConfigAction, deserializeMessage } from '@models';
+import { BackgroundAction, BackgroundMessage, ConfigAction, deserializeMessage, User } from '@models';
 
 import { StorageService } from '@core/storage/storage.service';
 import { HttpClient } from '@angular/common/http';
@@ -87,8 +87,14 @@ export class BackgroundComponent implements OnInit {
         return this.u.serializeAllUsers();
       case BackgroundAction.removeUser:
         if (msg.data !== null) {
-          this.u.removeUser(msg.data as string);
+          return this.u.removeUser(msg.data as string);
         }
+        break;
+      case BackgroundAction.addUser:
+        if (msg.data !== null) {
+          return this.u.addUser(msg.data as User);
+        }
+        break;
     }
 
     return null;
