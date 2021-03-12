@@ -11,10 +11,12 @@ import { AppComponent } from './app.component';
 
 import { PagesModule } from './pages/pages.module';
 import { CoreModule } from '@core/core.module';
+import { NotificationsComponent } from './src/apps/pages/notifications/notifications.component';
 
 @NgModule({
   declarations: [
     AppComponent,
+    NotificationsComponent,
   ],
   imports: [
     BrowserModule,

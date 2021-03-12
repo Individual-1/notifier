@@ -94,3 +94,7 @@ export interface ListingItemData {
     permalink: string,
     subreddit: string,
 }
+
+export function buildItemID(item: ListingItem) {
+    return item.kind + "_" + item.data.id;
+}

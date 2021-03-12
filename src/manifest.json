@@ -11,6 +11,7 @@
     "unlimitedStorage",
     "identity",
     "webRequest",
+    "notifications",
     "https://*.reddit.com/*"
   ],
 

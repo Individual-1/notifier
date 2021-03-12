@@ -9,6 +9,7 @@ import { LockedGuard } from '@core/locked/locked.guard';
 import { BackgroundComponent } from './pages/background/background.component';
 import { PageRouterGuard } from '@core/page-router/page-router.guard';
 import { UsersComponent } from './pages/users/users.component';
+import { NotificationsComponent } from './pages/notifications/notifications.component';
 
 const routes: Routes = [
   {
@@ -42,6 +43,11 @@ const routes: Routes = [
   {
     path: 'users',
     component: UsersComponent,
+    canActivate: [LockedGuard]
+  },
+  {
+    path: 'notifications',
+    component: NotificationsComponent,
     canActivate: [LockedGuard]
   },
   {

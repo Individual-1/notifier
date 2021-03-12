@@ -47,13 +47,16 @@ export class UsersComponent implements OnInit {
       let user: User | null = deserializeUser(jsUser);
 
       if (user !== null) {
-        if (user.userName == 'friends') {
-          this.friendsEnabled = true;
-        } else {
-          this.users.add(user.userName);
-        }
+        this.users.add(user.userName);
       }
     });
+
+    let fMsg: BackgroundMessage = { action: BackgroundAction.getFriendsEnabled, type: BackgroundDataType.null, data: null } as BackgroundMessage;
+    let friendsEnabled: boolean | null = await sendBackgroundMessage(msg);
+
+    if (friendsEnabled !== null && friendsEnabled) {
+      this.friendsEnabled = true;
+    }
 
     this.friendsInput = this.friendsEnabled;
     this.ref.detectChanges();
@@ -64,11 +67,10 @@ export class UsersComponent implements OnInit {
     if (this.friendsEnabled != this.friendsInput) {
       let friendResp: boolean | null = null;
       if (this.friendsInput) {
-        let userObj: User = { userName: 'friends', fullName: '', lastPost: '', submitted: true, comments: true } as User;
-        let msg: BackgroundMessage = { action: BackgroundAction.addUser, type: BackgroundDataType.User, data: userObj } as BackgroundMessage;
+        let msg: BackgroundMessage = { action: BackgroundAction.enableFriends, type: BackgroundDataType.null, data: null } as BackgroundMessage;
         friendResp = await sendBackgroundMessage(msg)
       } else {
-        let msg: BackgroundMessage = { action: BackgroundAction.removeUser, type: BackgroundDataType.string, data: 'friends' } as BackgroundMessage;
+        let msg: BackgroundMessage = { action: BackgroundAction.disableFriends, type: BackgroundDataType.null, data: null } as BackgroundMessage;
         friendResp = await sendBackgroundMessage(msg)
       }
 

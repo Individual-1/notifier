@@ -3,12 +3,12 @@ import { CryptoService } from '@core/crypto/crypto.service';
 import { StorageService } from '@core/storage/storage.service';
 import { TokenService } from '@core/token/token.service';
 
-import { User, serializeUser, deserializeUser, RedditParams as rp, ConfigAction, StorageKeys as sk, AboutResponse, ListingReponse } from '@models';
+import { User, serializeUser, RedditParams as rp, ConfigAction, StorageKeys as sk, Friends, ListingReponse, ListingItem, AboutResponse, buildItemID } from '@models';
 
 export class UserService {
   private users: Map<string, User>;
   private enabledUsers: Set<string>;
-  private friends: User | null = null;
+  private friends: Friends | null = null;
 
   constructor(private s: StorageService, private c: CryptoService, private t: TokenService, private http: HttpClient) {
     this.users = new Map<string, User>();
@@ -29,12 +29,9 @@ export class UserService {
       this.users.set(user.userName, user);
     });
 
-    if (this.users.has("friends")) {
-      let friendUser: User | undefined = this.users.get("friends");
-      if (friendUser !== undefined) {
-        this.friends = friendUser;
-      }
-      this.users.delete("friends");
+    let friends: Friends | undefined = await this.s.getFriends();
+    if (friends !== undefined) {
+      this.friends = friends;
     }
   }
 
@@ -48,14 +45,14 @@ export class UserService {
       }
     });
 
-    if (this.friends !== null) {
-      jsonUsers.push(serializeUser(this.friends));
-    }
-
     return JSON.stringify(jsonUsers);
   }
 
-  async getUserPosts(user: User) {
+  public async getFriendsEnabled(): Promise<boolean> {
+    return this.friends !== null;
+  }
+
+  async getUserPosts(user: User): Promise<ListingItem[] | null> {
     let queryURL: URL = new URL(rp.baseURL);
 
     if (user.comments && user.submitted) {
@@ -65,12 +62,74 @@ export class UserService {
     } else if (!user.comments && user.submitted) {
       queryURL.pathname = rp.userBase + user.userName + rp.submitted;
     } else {
-      return;
+      return null;
     }
 
     if (user.lastPost != "") {
       queryURL.searchParams.set("after", user.lastPost);
     }
+
+    let resp: Object | null = await this.getWithRefresh(queryURL);
+    if (resp !== null) {
+      let respListing: ListingReponse = resp as ListingReponse;
+      try {
+        if (respListing.data.children.length > 0) {
+          return respListing.data.children;
+        }
+      } catch (err) { }
+    }
+
+    return null;
+  }
+
+  async getFriendsPosts(): Promise<ListingItem[] | null> {
+    if (this.friends === null) {
+      return null;
+    }
+
+    let queryURL: URL = new URL(rp.baseURL);
+    queryURL.pathname = rp.friendsBase;
+
+    if (this.friends.lastSubmission != "") {
+      queryURL.searchParams.set("after", this.friends.lastSubmission);
+    }
+
+    let resp: Object | null = await this.getWithRefresh(queryURL);
+    if (resp !== null) {
+      let respListing: ListingReponse = resp as ListingReponse;
+      try {
+        if (respListing.data.children.length > 0) {
+          return respListing.data.children;
+        }
+      } catch (err) { }
+    }
+
+    return null;
+  }
+
+  async getFriendsComments(): Promise<ListingItem[] | null> {
+    if (this.friends === null) {
+      return null;
+    }
+
+    let queryURL: URL = new URL(rp.baseURL);
+    queryURL.pathname = rp.friendsBase + rp.comments;
+
+    if (this.friends.lastComment != "") {
+      queryURL.searchParams.set("after", this.friends.lastComment);
+    }
+
+    let resp: Object | null = await this.getWithRefresh(queryURL);
+    if (resp !== null) {
+      let respListing: ListingReponse = resp as ListingReponse;
+      try {
+        if (respListing.data.children.length > 0) {
+          return respListing.data.children;
+        }
+      } catch (err) { }
+    }
+
+    return null;
   }
 
   async setLastPost(user: User): Promise<User> {
@@ -89,14 +148,19 @@ export class UserService {
     queryURL.searchParams.set("limit", "1");
 
     let resp: Object | null = await this.getWithRefresh(queryURL);
-    if (resp === null) {
-      return user;
+    if (resp !== null) {
+      let respListing: ListingReponse = resp as ListingReponse;
+      try {
+        if (respListing.data.children.length > 0) {
+          user.lastPost = buildItemID(respListing.data.children[0]);
+        }
+      } catch (err) {
+      }
     }
 
-    let respListing: ListingReponse = resp as ListingReponse;
-  
+    return user;
   }
-  async setLastPostFriends(user: User): Promise<User | null> {
+  async setLastPostFriends(friends: Friends): Promise<Friends> {
     let queryURL: URL = new URL(rp.baseURL);
 
     // Submissions case
@@ -104,9 +168,15 @@ export class UserService {
     queryURL.searchParams.set("limit", "1");
 
     let resp: Object | null = await this.getWithRefresh(queryURL);
-    // TODO: populate first half of submissions lastpost
 
-    let submitLast: string = "";
+    if (resp !== null) {
+      let respListing: ListingReponse = resp as ListingReponse;
+      try {
+        if (respListing.data.children.length > 0) {
+          friends.lastSubmission = buildItemID(respListing.data.children[0]);
+        }
+      } catch (err) { }
+    }
 
     // Comments case
     queryURL = new URL(rp.baseURL);
@@ -115,22 +185,21 @@ export class UserService {
     queryURL.searchParams.set("limit", "1");
 
     resp = await this.getWithRefresh(queryURL);
-    // TODO: populate second half of comments lastpost value
+    if (resp !== null) {
+      let respListing: ListingReponse = resp as ListingReponse;
+      try {
+        if (respListing.data.children.length > 0) {
+          friends.lastComment = buildItemID(respListing.data.children[0]);
+        }
+      } catch (err) { }
+    }
 
-    let commentLast: string = "";
-
-    user.lastPost = submitLast + "|" + commentLast;
-
-    return user;
+    return friends;
   }
 
   public async removeUser(userName: string): Promise<boolean> {
     if (!this.users.has(userName)) {
       return false;
-    }
-
-    if (userName == "friends") {
-      return this.disableFriends()
     }
 
     try {
@@ -148,17 +217,13 @@ export class UserService {
     }
 
     this.friends = null;
-    await this.s.deleteUser("friends");
+    await this.s.deleteFriends();
     return true;
   }
 
   public async addUser(user: User): Promise<boolean> {
     if (this.users.has(user.userName)) {
       return false;
-    }
-
-    if (user.userName == "friends") {
-      return this.enableFriends();
     }
 
     let userExtra: User | null = await this.getUserInfo(user.userName);
@@ -183,9 +248,9 @@ export class UserService {
       return false;
     }
 
-    let user: User = { userName: 'friends', fullName: '', lastPost: '', submitted: true, comments: true } as User;
-    await this.s.putUser(user);
-    return false;
+    let friends: Friends = await this.setLastPostFriends({ key: sk.friendsKey, lastSubmission: "", lastComment: "" } as Friends);
+    await this.s.putFriends(friends);
+    return true;
   }
 
   public async getUserInfo(userName: string): Promise<User | null> {
@@ -199,12 +264,13 @@ export class UserService {
 
     let respAbout: AboutResponse = resp as AboutResponse;
 
-    return {  
+    return {
       userName: userName,
       fullName: respAbout.kind + "_" + respAbout.data.id,
       lastPost: "",
       submitted: false,
-      comments: false, } as User;
+      comments: false,
+    } as User;
   }
 
   private async getAuthParams(): Promise<Object | null> {
@@ -234,7 +300,7 @@ export class UserService {
     }
 
     let resp: Object;
-    try{
+    try {
       resp = await (this.http.get(url.toString(), httpOptions)).toPromise();
       return resp;
     } catch (err) {

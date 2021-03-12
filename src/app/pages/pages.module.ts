@@ -9,11 +9,12 @@ import { BackgroundComponent } from './background/background.component';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { UsersComponent } from './users/users.component';
 import { ReactiveComponentModule } from '@ngrx/component';
+import { NotificationsComponent } from './notifications/notifications.component';
 
 
 
 @NgModule({
-  declarations: [SettingsComponent, UnlockComponent, OauthComponent, HomeComponent, BackgroundComponent, UsersComponent],
+  declarations: [SettingsComponent, UnlockComponent, OauthComponent, HomeComponent, BackgroundComponent, UsersComponent, NotificationsComponent],
   imports: [
     CommonModule,
     FormsModule,

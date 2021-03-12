@@ -45,6 +45,7 @@ export class StorageKeys {
   static oauthClientSecret: string = "oauthClientSecret";
   static accessToken: string = "accessToken";
   static refreshToken: string = "refreshToken";
+  static friendsKey: string = "friends";
   static plaintextSettings: Array<string> = [
     StorageKeys.oauthClientId,
   ];
@@ -88,9 +89,11 @@ export class DatabaseParams {
   static dbName: string = "rdb";
   static configTable: string = "config";
   static userTable: string = "users";
+  static friendsTable: string = "friends";
   static schema: { [tableName: string]: string | null; } = {
     [DatabaseParams.configTable]: '&key', // Unique index on name of the key
     [DatabaseParams.userTable]: '&userName, &fullName', // Unique index on username and fullname
+    [DatabaseParams.friendsTable]: '&key',
   };
 }
 
@@ -134,8 +137,6 @@ function deserializeConfig(jsonAction: string): ConfigAction | null {
 
 /*
   Interface for user entries in IndexedDB as well as wider program representation
-  For the "friends" option we specialcase lastPost and divide it with a |,
-  for comment and submissions so submittedId|commentId
 */
 export interface User {
   userName: string,
@@ -163,6 +164,33 @@ export function deserializeUser(jsonStr: string): User | null {
   return obj as User;
 }
 
+/* 
+  Friends entry in IndexedDB
+*/
+export interface Friends {
+  key: string,
+  lastSubmission: string,
+  lastComment: string,
+}
+
+export function serializeFriends(entry: Friends): string {
+  return JSON.stringify(entry);
+}
+
+export function deserializeFriends(jsonStr: string): Friends | null {
+  if (jsonStr === null || jsonStr === undefined) {
+    return null;
+  }
+
+  let obj: Object = JSON.parse(jsonStr);
+
+  if (!obj.hasOwnProperty('key') || !obj.hasOwnProperty('lastSubmission') || !obj.hasOwnProperty('lastComment')) {
+    return null;
+  }
+
+  return obj as Friends;
+}
+
 /*
   Actions we want our background script to take
 
@@ -181,6 +209,9 @@ export enum BackgroundAction {
   getAllUsers, // Users - data: null - returns User[]
   removeUser, // Users - data: string - returns boolean
   addUser, // Users - data: User - returns boolean
+  getFriendsEnabled, // Users - data: null - returns boolean
+  enableFriends, // Users - data: null - returns boolean
+  disableFriends, // Users - data: null - returns boolean
 }
 
 export enum BackgroundDataType {
@@ -207,6 +238,9 @@ let BackgroundActionType: NumberMap = {
   [BackgroundAction.getAllUsers]: BackgroundDataType.null,
   [BackgroundAction.removeUser]: BackgroundDataType.string,
   [BackgroundAction.addUser]: BackgroundDataType.User,
+  [BackgroundAction.getFriendsEnabled]: BackgroundDataType.null,
+  [BackgroundAction.enableFriends]: BackgroundDataType.null,
+  [BackgroundAction.disableFriends]: BackgroundDataType.null,
 }
 
 export interface BackgroundMessage {

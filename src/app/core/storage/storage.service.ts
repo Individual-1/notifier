@@ -1,4 +1,4 @@
-import { StorageKeys as sk, DatabaseParams as dp, ConfigAction, User } from "@models";
+import { StorageKeys as sk, DatabaseParams as dp, ConfigAction, User, Friends } from "@models";
 
 import { Dexie } from "dexie";
 
@@ -78,4 +78,15 @@ export class StorageService {
     return this.db[dp.userTable].delete(key);
   }
 
+  public getFriends(): Promise<Friends | undefined> {
+    return this.db[dp.friendsTable].get(sk.friendsKey);
+  }
+
+  public putFriends(entry: Friends): Promise<string> {
+    return this.db[dp.friendsTable].put(entry);
+  }
+
+  public deleteFriends(): Promise<void> {
+    return this.db[dp.friendsTable].delete(sk.friendsKey);
+  }
 }

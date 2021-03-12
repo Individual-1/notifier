@@ -95,6 +95,12 @@ export class BackgroundComponent implements OnInit {
           return this.u.addUser(msg.data as User);
         }
         break;
+      case BackgroundAction.getFriendsEnabled:
+        return this.u.getFriendsEnabled();
+      case BackgroundAction.enableFriends:
+        return this.u.enableFriends();
+      case BackgroundAction.disableFriends:
+        return this.u.disableFriends();
     }
 
     return null;
