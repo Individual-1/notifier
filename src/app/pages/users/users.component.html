@@ -21,6 +21,7 @@
     <input type="checkbox" formControlName="friendsToggle" id="friendsToggle" [checked]="friendsInput"
       (click)="toggleFriends()">
     <button [disabled]="friendsInput == friendsEnabled && (!enableAdd || !usersForm.valid || !(commentEnabled || submissionEnabled))" (click)="submitChanges()">Submit</button>
+    <div *ngIf="errorMsg != ''">{{ errorMsg }}</div>
   </form>
   <table>
     <tr>

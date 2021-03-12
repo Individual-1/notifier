@@ -15,6 +15,7 @@ export class UsersComponent implements OnInit {
   commentEnabled: boolean = false;
   submissionEnabled: boolean = false;
   friendsInput: boolean = false;
+  errorMsg: string = "";
 
   constructor(private fb: FormBuilder, private ref: ChangeDetectorRef) {
     this.users = new Set<string>();

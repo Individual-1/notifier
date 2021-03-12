@@ -3,18 +3,22 @@ import { CryptoService } from '@core/crypto/crypto.service';
 import { StorageService } from '@core/storage/storage.service';
 import { TokenService } from '@core/token/token.service';
 
-import { User, serializeUser, deserializeUser, RedditParams as rp, ConfigAction, StorageKeys as sk, AboutResponse } from '@models';
+import { User, serializeUser, deserializeUser, RedditParams as rp, ConfigAction, StorageKeys as sk, AboutResponse, ListingReponse } from '@models';
 
 export class UserService {
   private users: Map<string, User>;
+  private enabledUsers: Set<string>;
+  private friends: User | null = null;
 
   constructor(private s: StorageService, private c: CryptoService, private t: TokenService, private http: HttpClient) {
     this.users = new Map<string, User>();
+    this.enabledUsers = new Set<string>();
   }
 
   resetUsers() {
     this.users.clear();
-    this.users.set('friends', { lastPost: '', submitted: true, comments: true } as User);
+    this.enabledUsers.clear();
+    this.friends = null;
   }
 
   async loadUsers() {
@@ -24,6 +28,14 @@ export class UserService {
     userArray.forEach((user) => {
       this.users.set(user.userName, user);
     });
+
+    if (this.users.has("friends")) {
+      let friendUser: User | undefined = this.users.get("friends");
+      if (friendUser !== undefined) {
+        this.friends = friendUser;
+      }
+      this.users.delete("friends");
+    }
   }
 
   public async serializeAllUsers(): Promise<string> {
@@ -36,10 +48,14 @@ export class UserService {
       }
     });
 
+    if (this.friends !== null) {
+      jsonUsers.push(serializeUser(this.friends));
+    }
+
     return JSON.stringify(jsonUsers);
   }
 
-  getUserPosts(user: User) {
+  async getUserPosts(user: User) {
     let queryURL: URL = new URL(rp.baseURL);
 
     if (user.comments && user.submitted) {
@@ -55,6 +71,57 @@ export class UserService {
     if (user.lastPost != "") {
       queryURL.searchParams.set("after", user.lastPost);
     }
+  }
+
+  async setLastPost(user: User): Promise<User> {
+    let queryURL: URL = new URL(rp.baseURL);
+
+    if (user.comments && user.submitted) {
+      queryURL.pathname = rp.userBase + user.userName + rp.overview;
+    } else if (user.comments && !user.submitted) {
+      queryURL.pathname = rp.userBase + user.userName + rp.comments;
+    } else if (!user.comments && user.submitted) {
+      queryURL.pathname = rp.userBase + user.userName + rp.submitted;
+    } else {
+      return user;
+    }
+
+    queryURL.searchParams.set("limit", "1");
+
+    let resp: Object | null = await this.getWithRefresh(queryURL);
+    if (resp === null) {
+      return user;
+    }
+
+    let respListing: ListingReponse = resp as ListingReponse;
+  
+  }
+  async setLastPostFriends(user: User): Promise<User | null> {
+    let queryURL: URL = new URL(rp.baseURL);
+
+    // Submissions case
+    queryURL.pathname = rp.friendsBase;
+    queryURL.searchParams.set("limit", "1");
+
+    let resp: Object | null = await this.getWithRefresh(queryURL);
+    // TODO: populate first half of submissions lastpost
+
+    let submitLast: string = "";
+
+    // Comments case
+    queryURL = new URL(rp.baseURL);
+
+    queryURL.pathname = rp.friendsBase + rp.comments;
+    queryURL.searchParams.set("limit", "1");
+
+    resp = await this.getWithRefresh(queryURL);
+    // TODO: populate second half of comments lastpost value
+
+    let commentLast: string = "";
+
+    user.lastPost = submitLast + "|" + commentLast;
+
+    return user;
   }
 
   public async removeUser(userName: string): Promise<boolean> {
@@ -76,7 +143,13 @@ export class UserService {
   }
 
   public async disableFriends(): Promise<boolean> {
-    return false;
+    if (this.friends == null) {
+      return false;
+    }
+
+    this.friends = null;
+    await this.s.deleteUser("friends");
+    return true;
   }
 
   public async addUser(user: User): Promise<boolean> {
@@ -106,6 +179,12 @@ export class UserService {
   }
 
   public async enableFriends(): Promise<boolean> {
+    if (this.friends !== null) {
+      return false;
+    }
+
+    let user: User = { userName: 'friends', fullName: '', lastPost: '', submitted: true, comments: true } as User;
+    await this.s.putUser(user);
     return false;
   }
 
